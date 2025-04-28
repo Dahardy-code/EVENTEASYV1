@@ -1,0 +1,49 @@
+{
+  "name": "eventeasyv1-frontend",
+  "version": "1.0.0",
+  "description": "Frontend pour Eventeasy, une plateforme de gestion d'événements et de mise en relation avec des prestataires.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ton-utilisateur/eventeasyv1-frontend.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@react-google-maps/api": "^2.20.0",
+    "axios": "^0.21.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.4",
+    "vite": "^6.2.6"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "start": "vite"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

@@ -1,0 +1,75 @@
+# ===============================================
+#          APPLICATION CONFIGURATION
+# ===============================================
+# Nom de l'application Spring Boot
+spring.application.name=EVENTEASYV1
+
+# ===============================================
+#          DATABASE CONFIGURATION (MySQL)
+# ===============================================
+# URL de connexion JDBC à votre base de données MySQL
+# !! Assurez-vous que la base 'EVENTEASYV1' existe sur votre serveur MySQL !!
+# Paramètres ajoutés :
+#   useSSL=false -> Désactive SSL pour la connexion locale (si non configuré)
+#   serverTimezone=UTC -> Définit un fuseau horaire cohérent pour éviter les problèmes de date/heure
+#   allowPublicKeyRetrieval=true -> Requis par certaines versions/configurations MySQL pour l'authentification
+spring.datasource.url=jdbc:mysql://localhost:3306/EVENTEASYV1?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+
+# Nom d'utilisateur pour la connexion à la base de données
+# !! Vérifiez que 'root' est le bon utilisateur pour votre instance MySQL !!
+spring.datasource.username=root
+
+# Mot de passe pour la connexion à la base de données
+# !! Vérifiez que '0000@' est le bon mot de passe pour votre utilisateur MySQL !!
+spring.datasource.password=0000@
+
+# Nom de la classe du driver JDBC pour MySQL
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# ===============================================
+#          JPA / HIBERNATE CONFIGURATION
+# ===============================================
+# Stratégie de génération/mise à jour du schéma de base de données par Hibernate :
+#   'update': Hibernate essaie de mettre à jour le schéma pour correspondre aux entités. Utile en début de dev, mais peut être risqué.
+#   'validate': Hibernate vérifie si le schéma BDD correspond aux entités, sans rien modifier (plus sûr si vous utilisez schema.sql).
+#   'none': Hibernate ne touche pas au schéma (recommandé si vous gérez le schéma entièrement via des scripts SQL comme schema.sql).
+#   'create-drop': Crée le schéma au démarrage et le supprime à l'arrêt (utile pour les tests).
+spring.jpa.hibernate.ddl-auto=update
+
+# Afficher les requêtes SQL générées par Hibernate dans la console (utile pour le débogage)
+spring.jpa.show-sql=true
+
+# Propriétés spécifiques à Hibernate
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+# Note: Utilisez MySQL8Dialect si vous utilisez MySQL v8.0+. Si vous utilisez MySQL v5.7, utilisez org.hibernate.dialect.MySQL57Dialect.
+
+# Formatage des requêtes SQL affichées (optionnel, améliore la lisibilité)
+spring.jpa.properties.hibernate.format_sql=true
+
+# ===============================================
+#          CONFIGURATION JWT (Si utilisée pour la sécurité)
+# ===============================================
+# Clé secrète pour signer les tokens JWT (NE PAS METTRE EN DUR ICI EN PRODUCTION)
+# À définir via des variables d'environnement ou un fichier de configuration externe en production
+# jwt.secret=VotreSuperSecretÀNePasMettreIciNormalementMaisPourLaDémoOK
+# Durée de validité du token JWT en millisecondes (ici 1 heure)
+jwt.expiration.ms=3600000
+
+# ===============================================
+#          CONFIGURATION SWAGGER / OPENAPI (Supprimée/Commentée)
+# ===============================================
+# Les lignes suivantes sont commentées car Swagger n'est pas requis pour le moment.
+# springdoc.swagger-ui.path=/swagger-ui.html
+# springdoc.api-docs.path=/v3/api-docs
+
+# ===============================================
+#          CONFIGURATION CHATBOT (Non présente)
+# ===============================================
+# Aucune configuration spécifique au chatbot n'est nécessaire ici pour l'instant.
+# Les configurations éventuelles (clés API, etc.) seraient ajoutées plus tard si besoin.
+
+# ===============================================
+#          CONFIGURATION DU SERVEUR (Optionnel)
+# ===============================================
+# Port sur lequel l'application Spring Boot écoute (par défaut 8080)
+server.port=8080
