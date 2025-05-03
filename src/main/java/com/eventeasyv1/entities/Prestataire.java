@@ -4,6 +4,8 @@ package com.eventeasyv1.entities;
 import jakarta.persistence.*; // Import the whole package or specific annotations
 import lombok.Data; // Assuming you use Lombok for getters/setters
 
+import java.util.List;
+
 @Entity
 @Data // Add if you use Lombok, otherwise keep manual getters/setters
 public class Prestataire {
@@ -15,7 +17,24 @@ public class Prestataire {
     private String email;
     private String téléphone;
     private String adresse;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    private String nom;
+    private String email;
+    private String motDePasse;
+    private String telephone;
+    private String categorie;
+
+    @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL)
+    private List<Disponibilite> disponibilites;
+
+    @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL)
+    private List<Evenement> evenements;
+
+    @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL)
+    private List<Invitation> invitations;
     // Remove manual getters/setters if using @Data
     /*
     public Long getId() { return id; }

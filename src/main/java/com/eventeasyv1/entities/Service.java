@@ -1,53 +1,39 @@
 package com.eventeasyv1.entities;
 
-// Corrected imports for Spring Boot 3+ / Jakarta EE
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-// Add other jakarta.persistence imports if needed (e.g., @GeneratedValue, @Column)
+import jakarta.persistence.*; // Import general jakarta.persistence package
+import lombok.Getter; // Using Lombok for less boilerplate
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Entity
+@Getter // Lombok annotation
+@Setter // Lombok annotation
+@NoArgsConstructor // Lombok annotation
+@AllArgsConstructor // Lombok annotation
 public class Service {
 
     @Id
-    // Consider adding @GeneratedValue if you want the ID generated automatically
-    // e.g., @GeneratedValue(strategy = GenerationType.IDENTITY)
-    // If so, you'll need: import jakarta.persistence.GeneratedValue;
-    //                     import jakarta.persistence.GenerationType;
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-generate ID
     private Long id;
+
+    @Column(nullable = false) // Add constraints
     private String nom;
+
+    @Column(columnDefinition = "TEXT") // Better for longer descriptions
     private String description;
-    private double prix;
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
+    @Column(nullable = false)
+    private double prix; // Consider using BigDecimal for currency
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @ManyToOne(fetch = FetchType.LAZY) // Relationship to Prestataire
+    @JoinColumn(name = "prestataire_id", nullable = false) // Foreign key column
+    private Prestataire prestataire;
 
-    public String getNom() {
-        return nom;
-    }
+    // Constructeur sans ID peut être utile (Lombok @NoArgsConstructor s'en charge si besoin)
+    // Lombok @AllArgsConstructor gère le constructeur avec tous les champs
 
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
+    // Lombok @Getter and @Setter handle all getters and setters automatically
+    // No need to write them manually if you have Lombok configured
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public double getPrix() {
-        return prix;
-    }
-
-    public void setPrix(double prix) {
-        this.prix = prix;
-    }
 }
