@@ -1,5 +1,6 @@
 package com.eventeasyv1.controller;
-
+import com.eventeasyv1.dto.DisponibiliteDto;
+import com.eventeasyv1.dto.input.DisponibiliteCreateDto;
 import com.eventeasyv1.dto.ServiceDto;
 import com.eventeasyv1.dto.input.ServiceCreateUpdateDto;
 import com.eventeasyv1.service.PrestataireService; // Assurez-vous que le chemin est correct
@@ -83,6 +84,31 @@ public class PrestataireController {
     }
 
     // Ajoutez ici les endpoints pour les disponibilités quand vous ferez l'Étape 7
-    // ex: POST /me/disponibilites, GET /me/disponibilites, etc.
 
+    // ex: POST /me/disponibilites, GET /me/disponibilites, etc.
+    // == NOUVEAUX Endpoints pour la Gestion des Disponibilités (ÉTAPE 7) ==
+
+    @PostMapping("/me/disponibilites")
+    @PreAuthorize("hasRole('PRESTATAIRE')")
+    public ResponseEntity<DisponibiliteDto> createDisponibilite(@Valid @RequestBody DisponibiliteCreateDto dispoDto, Authentication authentication) {
+        String email = authentication.getName();
+        DisponibiliteDto createdDisponibilite = prestataireService.addDisponibilite(dispoDto, email);
+        return new ResponseEntity<>(createdDisponibilite, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/me/disponibilites")
+    @PreAuthorize("hasRole('PRESTATAIRE')")
+    public ResponseEntity<List<DisponibiliteDto>> getMyDisponibilites(Authentication authentication) {
+        String email = authentication.getName();
+        List<DisponibiliteDto> disponibilites = prestataireService.getMyDisponibilites(email);
+        return ResponseEntity.ok(disponibilites);
+    }
+
+    @DeleteMapping("/me/disponibilites/{id}")
+    @PreAuthorize("hasRole('PRESTATAIRE')")
+    public ResponseEntity<Void> deleteDisponibilite(@PathVariable Long id, Authentication authentication) {
+        String email = authentication.getName();
+        prestataireService.deleteDisponibilite(id, email);
+        return ResponseEntity.noContent().build(); // HTTP 204 No Content
+    }
 }

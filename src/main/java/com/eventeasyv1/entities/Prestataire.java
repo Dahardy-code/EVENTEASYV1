@@ -17,19 +17,11 @@ public class Prestataire {
     private String email;
     private String téléphone;
     private String adresse;
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
-    private String nom;
-    private String email;
-    private String motDePasse;
-    private String telephone;
-    private String categorie;
 
     @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL)
     private List<Disponibilite> disponibilites;
-
+/*
     @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL)
     private List<Evenement> evenements;
 
