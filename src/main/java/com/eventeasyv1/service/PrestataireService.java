@@ -4,7 +4,7 @@ import com.eventeasyv1.dao.DisponibiliteRepository;
 import com.eventeasyv1.dao.PrestataireRepository;
 import com.eventeasyv1.dao.ServiceRepository;
 import com.eventeasyv1.dto.DisponibiliteDto;
-import com.eventeasyv1.dto.PrestataireDto;
+import com.eventeasyv1.dto.PrestataireDto; // Assurez-vous que cet import est présent
 import com.eventeasyv1.dto.ServiceDto;
 import com.eventeasyv1.dto.input.DisponibiliteCreateDto;
 import com.eventeasyv1.dto.input.ServiceCreateUpdateDto;
@@ -12,125 +12,97 @@ import com.eventeasyv1.entities.Disponibilite;
 import com.eventeasyv1.entities.Prestataire;
 import com.eventeasyv1.entities.Service;
 import com.eventeasyv1.exception.BadRequestException;
-import com.eventeasyv1.exception.ResourceNotFoundException; // Vous devrez créer cette exception
+import com.eventeasyv1.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException; // Import for security check
-import org.springframework.stereotype.Component; // Use @Service usually
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service; // <--- CHANGÉ de @Component à @Service (plus sémantique)
 import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component // Ou @Service pour la sémantique
-public class PrestataireService { // Renommez en PrestataireServiceImpl si vous utilisez une interface
+@Service // Utilisation de @Service pour la couche métier
+public class PrestataireService {
 
     @Autowired
     private ServiceRepository serviceRepository;
 
     @Autowired
     private PrestataireRepository prestataireRepository;
+
     @Autowired
     private DisponibiliteRepository disponibiliteRepository;
 
-    // --- Méthodes pour la gestion des Services par le Prestataire ---
+
+    // --- Méthode pour l'API /me (Étape 5 - Partie Prestataire) ---
+    // Placée ici pour une meilleure organisation
+
+    @Transactional(readOnly = true)
+    public PrestataireDto getCurrentPrestataireDetails(String prestataireEmail) {
+        // Réutilise la méthode privée existante (ou celle ajoutée ci-dessous) pour trouver le prestataire
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail);
+        // Appelle la méthode de mapping ajoutée ci-dessous
+        return mapPrestataireToDto(prestataire);
+    }
+
+
+    // --- Méthodes pour la gestion des Services (Étape 6) ---
 
     @Transactional
     public ServiceDto addService(ServiceCreateUpdateDto serviceDto, String prestataireEmail) {
-        Prestataire prestataire = prestataireRepository.findByEmail(prestataireEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Prestataire", "email", prestataireEmail));
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
 
         Service service = new Service();
         service.setNom(serviceDto.getNom());
         service.setDescription(serviceDto.getDescription());
         service.setPrix(serviceDto.getPrix());
-        service.setPrestataire(prestataire); // Link the service to the prestataire
+        service.setPrestataire(prestataire);
 
         Service savedService = serviceRepository.save(service);
-        return mapToDto(savedService);
+        return mapServiceToDto(savedService); // Renommé mapToDto en mapServiceToDto pour clarté
     }
 
     @Transactional(readOnly = true)
     public List<ServiceDto> getMyServices(String prestataireEmail) {
-        Prestataire prestataire = prestataireRepository.findByEmail(prestataireEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Prestataire", "email", prestataireEmail));
-
-        List<Service> services = serviceRepository.findByPrestataireId(prestataire.getId());
-        return services.stream().map(this::mapToDto).collect(Collectors.toList());
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
+        List<Service> services = serviceRepository.findByPrestataireId(prestataire.getId()); // Utilisez findByPrestataireId si vous n'avez pas ajouté le tri
+        return services.stream().map(this::mapServiceToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public ServiceDto getMyServiceById(Long serviceId, String prestataireEmail) {
-        Prestataire prestataire = prestataireRepository.findByEmail(prestataireEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Prestataire", "email", prestataireEmail));
-        Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
-
-        // Security Check: Ensure the service belongs to the logged-in prestataire
-        if (!service.getPrestataire().getId().equals(prestataire.getId())) {
-            throw new AccessDeniedException("Vous n'êtes pas autorisé à accéder à ce service.");
-        }
-
-        return mapToDto(service);
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
+        Service service = findServiceByIdAndCheckOwnership(serviceId, prestataire); // Appel helper
+        return mapServiceToDto(service);
     }
-
 
     @Transactional
     public ServiceDto updateService(Long serviceId, ServiceCreateUpdateDto serviceDto, String prestataireEmail) {
-        Prestataire prestataire = prestataireRepository.findByEmail(prestataireEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Prestataire", "email", prestataireEmail));
-        Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
-
-        // Security Check: Ensure the service belongs to the logged-in prestataire
-        if (!service.getPrestataire().getId().equals(prestataire.getId())) {
-            throw new AccessDeniedException("Vous n'êtes pas autorisé à modifier ce service.");
-        }
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
+        Service service = findServiceByIdAndCheckOwnership(serviceId, prestataire); // Appel helper
 
         service.setNom(serviceDto.getNom());
         service.setDescription(serviceDto.getDescription());
         service.setPrix(serviceDto.getPrix());
 
         Service updatedService = serviceRepository.save(service);
-        return mapToDto(updatedService);
+        return mapServiceToDto(updatedService);
     }
 
     @Transactional
     public void deleteService(Long serviceId, String prestataireEmail) {
-        Prestataire prestataire = prestataireRepository.findByEmail(prestataireEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Prestataire", "email", prestataireEmail));
-        Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
-
-        // Security Check: Ensure the service belongs to the logged-in prestataire
-        if (!service.getPrestataire().getId().equals(prestataire.getId())) {
-            throw new AccessDeniedException("Vous n'êtes pas autorisé à supprimer ce service.");
-        }
-
-        serviceRepository.deleteById(serviceId);
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
+        Service service = findServiceByIdAndCheckOwnership(serviceId, prestataire); // Appel helper
+        serviceRepository.delete(service); // Préférable de passer l'entité pour le contexte de persistance
     }
 
 
-    // --- Méthode utilitaire pour mapper Entité vers DTO ---
-    private ServiceDto mapToDto(Service service) {
-        ServiceDto dto = new ServiceDto();
-        dto.setId(service.getId());
-        dto.setNom(service.getNom());
-        dto.setDescription(service.getDescription());
-        dto.setPrix(service.getPrix());
-        dto.setPrestataireId(service.getPrestataire().getId());
-        dto.setPrestataireNom(service.getPrestataire().getNom()); // Assurez-vous que Prestataire a une méthode getNom()
-        return dto;
-    }
-
-    // Ajoutez ici d'autres méthodes du service Prestataire si nécessaire
-    // (ex: getCurrentPrestataireDetails, getMyDisponibilites, etc.)
-
-    // --- NOUVELLES Méthodes pour la gestion des Disponibilités (ÉTAPE 7) ---
+    // --- Méthodes pour la gestion des Disponibilités (Étape 7) ---
 
     @Transactional
     public DisponibiliteDto addDisponibilite(DisponibiliteCreateDto dispoDto, String prestataireEmail) {
-        Prestataire prestataire = findPrestataireByEmail(prestataireEmail);
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
 
         // Validation Logique
         if (dispoDto.getDateDebut() == null || dispoDto.getDateFin() == null) {
@@ -158,34 +130,85 @@ public class PrestataireService { // Renommez en PrestataireServiceImpl si vous 
 
     @Transactional(readOnly = true)
     public List<DisponibiliteDto> getMyDisponibilites(String prestataireEmail) {
-        Prestataire prestataire = findPrestataireByEmail(prestataireEmail);
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
         List<Disponibilite> disponibilites = disponibiliteRepository.findByPrestataireIdOrderByDateDebutAsc(prestataire.getId());
         return disponibilites.stream().map(this::mapDisponibiliteToDto).collect(Collectors.toList());
     }
 
     @Transactional
     public void deleteDisponibilite(Long disponibiliteId, String prestataireEmail) {
-        Prestataire prestataire = findPrestataireByEmail(prestataireEmail);
-        // Trouve la disponibilité ET vérifie qu'elle appartient bien au prestataire connecté
+        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Appel helper
         Disponibilite disponibilite = disponibiliteRepository.findByIdAndPrestataireId(disponibiliteId, prestataire.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Disponibilite", "id", disponibiliteId + " pour ce prestataire"));
 
         disponibiliteRepository.delete(disponibilite);
     }
-    // --- Méthode utilitaire pour mapper Entité Disponibilite vers DTO ---
+
+
+    // --- Méthodes utilitaires privées (Helpers) ---
+
+    // Helper pour trouver Prestataire par email (évite la duplication)
+    private Prestataire findPrestataireByEmail(String email) {
+        return prestataireRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Prestataire", "email", email));
+    }
+
+    // Helper pour trouver Service par ID et vérifier la propriété
+    private Service findServiceByIdAndCheckOwnership(Long serviceId, Prestataire prestataire) {
+        Service service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
+        if (!service.getPrestataire().getId().equals(prestataire.getId())) {
+            throw new AccessDeniedException("Accès non autorisé à ce service.");
+        }
+        return service;
+    }
+
+    // Helper pour mapper Service vers ServiceDto
+    private ServiceDto mapServiceToDto(Service service) { // <--- Renommé pour la clarté
+        ServiceDto dto = new ServiceDto();
+        dto.setId(service.getId());
+        dto.setNom(service.getNom());
+        dto.setDescription(service.getDescription());
+        dto.setPrix(service.getPrix());
+        if(service.getPrestataire() != null) { // Vérification nullité avant accès
+            dto.setPrestataireId(service.getPrestataire().getId());
+            dto.setPrestataireNom(service.getPrestataire().getNom());
+        }
+        return dto;
+    }
+
+    // Helper pour mapper Disponibilite vers DisponibiliteDto
     private DisponibiliteDto mapDisponibiliteToDto(Disponibilite disponibilite) {
         DisponibiliteDto dto = new DisponibiliteDto();
         dto.setId(disponibilite.getId());
         dto.setDateDebut(disponibilite.getDateDebut());
         dto.setDateFin(disponibilite.getDateFin());
-        if (disponibilite.getPrestataire() != null) { // Check for null
+        if (disponibilite.getPrestataire() != null) {
             dto.setPrestataireId(disponibilite.getPrestataire().getId());
         }
         return dto;
     }
-    @Transactional(readOnly = true)
-    public PrestataireDto getCurrentPrestataireDetails(String prestataireEmail) {
-        Prestataire prestataire = findPrestataireByEmail(prestataireEmail); // Réutilise la méthode privée existante
-        return mapPrestataireToDto(prestataire); // Appelle la nouvelle méthode de mapping
+
+    // AJOUTÉ : Helper pour mapper Prestataire vers PrestataireDto (manquant)
+    private PrestataireDto mapPrestataireToDto(Prestataire prestataire) {
+        PrestataireDto dto = new PrestataireDto();
+        // Copier les champs hérités
+        dto.setId(prestataire.getId());
+        dto.setNom(prestataire.getNom());
+        dto.setPrenom(prestataire.getPrenom());
+        dto.setEmail(prestataire.getEmail());
+        dto.setRole("PRESTATAIRE"); // Ou lire depuis l'entité si nécessaire
+
+        // Copier les champs spécifiques
+        dto.setNomEntreprise(prestataire.getNomEntreprise());
+        dto.setCategorieService(prestataire.getCategorieService());
+        dto.setAdresse(prestataire.getAdresse());
+        dto.setNumeroTel(prestataire.getNumeroTel());
+        dto.setDescription(prestataire.getDescription());
+        dto.setSiteWeb(prestataire.getSiteWeb());
+        dto.setDateInscription(prestataire.getDateInscription());
+        dto.setEstVerifie(prestataire.isEstVerifie());
+
+        return dto;
     }
 }
