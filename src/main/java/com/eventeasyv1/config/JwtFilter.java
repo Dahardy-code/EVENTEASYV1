@@ -1,10 +1,8 @@
-package com.eventeasyv1.config; // Verify this is the correct package
+package com.eventeasyv1.config;
 
-// Correct import for the interface
-import com.eventeasyv1.utils.JwtUtil; // Verify this path is correct
+import com.eventeasyv1.utils.JwtUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
-// SignatureException might be deprecated in newer jjwt, consider SecurityException
 import io.jsonwebtoken.SignatureException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import jakarta.servlet.FilterChain;
@@ -13,12 +11,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired; // Keep for constructor
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService; // Correctly import the interface
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -30,12 +29,10 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
 
-    // Use final fields for constructor injection
     private final JwtUtil jwtUtil;
-    private final UserDetailsService userDetailsService; // Inject the interface
+    private final UserDetailsService userDetailsService;
 
-    // Constructor Injection (Preferred)
-    @Autowired // Optional if only one constructor
+    @Autowired
     public JwtFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
@@ -48,58 +45,68 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
+        final String requestUri = request.getRequestURI(); // Obtenir l'URI pour les logs
         final String authorizationHeader = request.getHeader("Authorization");
         final String bearerPrefix = "Bearer ";
 
-        String username = null; // Extracted username (email)
-        String jwt = null;      // Extracted JWT
+        String username = null;
+        String jwt = null;
 
-        // 1. Extract JWT from header
+        // Log entrée filtre
+        log.trace("JwtFilter processing request for: {}", requestUri);
+
+        // 1. Extraire le JWT
         if (authorizationHeader != null && authorizationHeader.startsWith(bearerPrefix)) {
             jwt = authorizationHeader.substring(bearerPrefix.length());
             try {
                 username = jwtUtil.extractUsername(jwt);
-                log.trace("JWT Filter: Extracted username '{}' from token.", username);
+                log.trace("Extracted username '{}' from token for URI: {}", username, requestUri);
             } catch (ExpiredJwtException e) {
-                log.warn("JWT Filter: Token expired: {}", e.getMessage());
+                log.warn("JWT expired for URI {}: {}", requestUri, e.getMessage());
             } catch (UnsupportedJwtException e) {
-                log.warn("JWT Filter: Token format unsupported: {}", e.getMessage());
+                log.warn("JWT format unsupported for URI {}: {}", requestUri, e.getMessage());
             } catch (MalformedJwtException e) {
-                log.warn("JWT Filter: Token malformed: {}", e.getMessage());
+                log.warn("JWT malformed for URI {}: {}", requestUri, e.getMessage());
             } catch (SignatureException e) {
-                log.warn("JWT Filter: Token signature validation failed: {}", e.getMessage());
+                log.warn("JWT signature validation failed for URI {}: {}", requestUri, e.getMessage());
             } catch (IllegalArgumentException e) {
-                log.warn("JWT Filter: Token claims invalid: {}", e.getMessage());
+                log.warn("JWT claims invalid for URI {}: {}", requestUri, e.getMessage());
             } catch (Exception e) {
-                log.error("JWT Filter: Unexpected error extracting username from token", e);
+                log.error("Unexpected error extracting username from token for URI {}", requestUri, e);
             }
         } else {
-            log.trace("JWT Filter: Authorization header missing or not Bearer for URI: {}", request.getRequestURI());
+            log.trace("No Authorization Bearer header found for URI: {}", requestUri);
         }
 
-        // 2. Validate token and set SecurityContext if username extracted and no current auth
+        // 2. Valider et mettre en place l'authentification SI username trouvé ET pas déjà authentifié
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            log.debug("JWT Filter: Attempting validation for '{}'.", username);
-
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
-
-            if (jwtUtil.validateToken(jwt, userDetails)) {
-                log.info("JWT Filter: Token validated for '{}'. Setting SecurityContext.", username);
-
-                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities()
-                );
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-
-            } else {
-                log.warn("JWT Filter: Token validation failed for user '{}'.", username);
+            log.debug("Attempting token validation for user '{}', URI: {}", username, requestUri);
+            try {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+                if (jwtUtil.validateToken(jwt, userDetails)) {
+                    log.info("Token validated for user '{}'. Setting SecurityContext for URI: {}", username, requestUri);
+                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities()
+                    );
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                } else {
+                    log.warn("Token validation failed for user '{}', URI: {}", username, requestUri);
+                }
+            } catch (UsernameNotFoundException e) {
+                log.warn("User '{}' found in token but not found by UserDetailsService for URI: {}", username, requestUri);
+                // Ne pas définir d'authentification si l'utilisateur n'est pas trouvé
+            } catch (Exception e) {
+                log.error("Error during UserDetailsService call or token validation for user '{}', URI: {}", username, requestUri, e);
             }
         } else if (username != null) {
-            log.trace("JWT Filter: SecurityContext already populated for '{}'.", username);
+            log.trace("SecurityContext already populated for user '{}', URI: {}", username, requestUri);
+        } else {
+            log.trace("No username extracted or SecurityContext already populated, proceeding without setting auth for URI: {}", requestUri);
         }
 
-        // 3. Continue filter chain
+        // 3. Continuer la chaîne de filtres
+        log.trace("Proceeding with filter chain for URI: {}", requestUri);
         filterChain.doFilter(request, response);
     }
 }

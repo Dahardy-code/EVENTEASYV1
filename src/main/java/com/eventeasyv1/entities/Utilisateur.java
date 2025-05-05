@@ -7,35 +7,29 @@ import lombok.AllArgsConstructor;
 
 @Entity
 @Table(name = "utilisateur") // Table de base pour les champs communs
-@Inheritance(strategy = InheritanceType.JOINED) // *** Stratégie corrigée pour correspondre à la DB ***
-// On ne met PAS @DiscriminatorColumn avec la stratégie JOINED
+@Inheritance(strategy = InheritanceType.JOINED) // Stratégie pour tables séparées liées par ID
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-// 'abstract' est pertinent ici car un utilisateur DOIT être Client ou Prestataire
+// 'abstract' car un utilisateur doit être un Client, Prestataire, ou Admin
 public abstract class Utilisateur {
 
     @Id
-    // L'ID est généré uniquement dans cette table de base
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // L'ID est généré dans cette table
     private Long id;
 
-    // Assumer nullable=true si non spécifié NOT NULL dans le CREATE TABLE
-    @Column(name = "nom", nullable = true)
+    @Column(name = "nom")
     private String nom;
 
-    @Column(name = "prenom", nullable = true)
+    @Column(name = "prenom")
     private String prenom;
 
-    // unique=true correspond au schéma
-    @Column(name = "email", unique = true, nullable = true)
+    @Column(name = "email", unique = true) // unique = true correspond au schéma
     private String email;
 
-    // Mapper explicitement le nom de la colonne DB
-    @Column(name = "mot_de_passe", nullable = true)
-    private String password; // Nom du champ en Java reste 'password'
+    @Column(name = "mot_de_passe") // Mapper explicitement le nom de colonne DB
+    private String password; // Nom du champ Java peut rester 'password'
 
-    // La colonne 'role' de la DB n'est pas mappée ici avec JOINED.
-    // Le type est déterminé par la table jointe (client, prestataire).
-
+    // La colonne 'role' n'est PAS mappée ici avec JOINED.
+    // Le type (et donc le rôle implicite) est déterminé par la table jointe.
 }
