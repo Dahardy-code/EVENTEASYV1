@@ -1,25 +1,45 @@
-// src/main/java/com/eventeasyv1/entities/Prestataire.java
 package com.eventeasyv1.entities;
 
-import jakarta.persistence.*; // Import the whole package or specific annotations
-import lombok.Data; // Assuming you use Lombok for getters/setters
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+// Importez List si vous décommentez les relations
+// import java.util.List;
 
 @Entity
-@Data // Add if you use Lombok, otherwise keep manual getters/setters
-public class Prestataire {
+@Table(name = "prestataire") // *** Pointe vers la table spécifique 'prestataire' ***
+@PrimaryKeyJoinColumn(name = "id") // *** Indique que 'id' est PK et FK vers utilisateur.id ***
+// On ne met PAS @DiscriminatorValue avec JOINED
+@Data
+@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor
+@AllArgsConstructor
+public class Prestataire extends Utilisateur {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Good practice for auto-generated IDs
-    private Long id;
-    private String nom;
-    private String email;
-    private String téléphone;
+    // L'ID est hérité et géré par @PrimaryKeyJoinColumn
+
+    // Mappages explicites des colonnes spécifiques
+    @Column(name = "nom_entreprise", nullable = true)
+    private String nomEntreprise;
+
+    @Column(name = "categorie_service", nullable = true)
+    private String categorieService;
+
+    @Column(name = "adresse", nullable = true)
     private String adresse;
 
-    // Remove manual getters/setters if using @Data
-    /*
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    // ... other getters/setters
-    */
+    @Column(name = "numero_tel", nullable = true)
+    private String numeroTel;
+
+    // --- Relations ---
+    // Ces relations utilisent 'prestataire_id' qui est défini dans les tables
+    // service et disponibilite, donc le mappedBy devrait fonctionner.
+    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // private List<Service> services;
+
+    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // private List<Disponibilite> disponibilites;
 }

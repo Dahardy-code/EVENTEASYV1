@@ -3,6 +3,7 @@ package com.eventeasyv1.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 // import io.jsonwebtoken.io.Decoders; // This import is present but not used in the provided code snippet. Remove if not needed elsewhere.
 import org.slf4j.Logger; // Added for potential logging
@@ -28,7 +29,7 @@ public class JwtUtil {
     // Tokens issued before a restart will become invalid.
     // For production, use a stable, securely stored key.
     // See notes below on how to use a configured key.
-    private final SecretKey SECRET_KEY = Keys.secretKeyFor(Jwts.SIG.HS256);
+    private final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
     /*
     // --- Example: Using a configured Base64 encoded key (Recommended for stability) ---

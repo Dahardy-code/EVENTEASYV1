@@ -1,31 +1,58 @@
 import axios from 'axios';
 
-// Configurez l'URL de base de votre API backend
-const API_URL = 'http://localhost:8080/api/auth'; // Adaptez le port si nécessaire
+// Use environment variable for the API base URL
+// Ensure you have a .env file in your project root with:
+// VITE_API_BASE_URL=http://localhost:8080/api
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Crée une instance axios pour l'authentification
+if (!API_BASE_URL) {
+    console.error("Fatal Error: VITE_API_BASE_URL is not defined in your environment variables (.env file).");
+    // You might want to throw an error or show a message to the user
+}
+
+// --- Axios Instance Configuration ---
+
+// Instance for Authentication endpoints (register, login)
 const authApiClient = axios.create({
-    baseURL: API_URL,
+    baseURL: `${API_BASE_URL}/auth`, // Specific path for auth routes
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Crée une instance axios pour les appels API authentifiés
+// Instance for Authenticated API calls (requires JWT)
 const apiClient = axios.create({
-    baseURL: 'http://localhost:8080/api', // URL de base pour les autres endpoints
+    baseURL: API_BASE_URL, // Base URL for other API endpoints
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Intercepteur pour ajouter le token JWT à chaque requête de apiClient
+// --- Helper Function to Store Auth Data ---
+
+const storeAuthData = (data) => {
+    if (data && data.token) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userEmail', data.email);
+        localStorage.setItem('userId', data.userId);
+        // Store any other relevant user info if needed
+        console.log("Auth data stored:", { role: data.role, email: data.email, userId: data.userId });
+    } else {
+        console.warn("Attempted to store auth data, but token was missing.", data);
+    }
+};
+
+// --- Axios Interceptor for JWT ---
+
+// Add JWT token to every request made with 'apiClient'
 apiClient.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('authToken'); // Ou sessionStorage
+        const token = localStorage.getItem('authToken');
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
+        // console.log('Sending request with token:', !!token); // For debugging
         return config;
     },
     (error) => {
@@ -33,72 +60,101 @@ apiClient.interceptors.request.use(
     }
 );
 
-// Fonction pour l'inscription d'un client
+// --- Authentication API Functions ---
+
+/**
+ * Registers a new client user.
+ * @param {object} userData - { nom, prenom, email, password, role: 'CLIENT' }
+ * @returns {Promise<object>} Backend response data including token and user info.
+ */
 export const registerClient = async (userData) => {
     try {
+        console.log("Calling /register/client with data:", userData);
         const response = await authApiClient.post('/register/client', userData);
-        if (response.data && response.data.token) {
-            // Stocker le token après inscription réussie
-            localStorage.setItem('authToken', response.data.token);
-            localStorage.setItem('userRole', response.data.role);
-            localStorage.setItem('userEmail', response.data.email);
-            localStorage.setItem('userId', response.data.userId);
-        }
-        return response.data; // Contient { token, email, role, userId }
+        storeAuthData(response.data); // Store token and user info on success
+        return response.data;
     } catch (error) {
-        console.error("Erreur d'inscription:", error.response?.data || error.message);
-        throw error.response?.data || new Error("Erreur lors de l'inscription");
+        const errorData = error.response?.data || { message: error.message };
+        console.error("Erreur d'inscription Client:", errorData);
+        throw errorData; // Re-throw backend error or a generic one
     }
 };
 
-// Fonction pour la connexion
+/**
+ * Registers a new prestataire user.
+ * @param {object} userData - { nom, prenom, email, password, role: 'PRESTATAIRE', ...other fields? }
+ * @returns {Promise<object>} Backend response data including token and user info.
+ */
+export const registerPrestataire = async (userData) => {
+    try {
+        // *** IMPORTANT: Verify '/register/prestataire' is your correct backend endpoint ***
+        console.log("Calling /register/prestataire with data:", userData);
+        const response = await authApiClient.post('/register/prestataire', userData);
+        storeAuthData(response.data); // Store token and user info on success
+        return response.data;
+    } catch (error) {
+        const errorData = error.response?.data || { message: error.message };
+        console.error("Erreur d'inscription Prestataire:", errorData);
+        throw errorData; // Re-throw backend error or a generic one
+    }
+};
+
+
+/**
+ * Logs in a user.
+ * @param {object} credentials - { email, password }
+ * @returns {Promise<object>} Backend response data including token and user info.
+ */
 export const login = async (credentials) => {
     try {
         const response = await authApiClient.post('/login', credentials);
-        if (response.data && response.data.token) {
-            // Stocker le token et les infos utilisateur
-            localStorage.setItem('authToken', response.data.token);
-            localStorage.setItem('userRole', response.data.role);
-            localStorage.setItem('userEmail', response.data.email);
-            localStorage.setItem('userId', response.data.userId);
-             // Vous pouvez stocker d'autres infos si nécessaire
-        }
-        return response.data; // Contient { token, email, role, userId }
+        storeAuthData(response.data); // Store token and user info on success
+        return response.data;
     } catch (error) {
-        console.error("Erreur de connexion:", error.response?.data || error.message);
-        throw error.response?.data || new Error("Erreur lors de la connexion");
+        const errorData = error.response?.data || { message: error.message };
+        console.error("Erreur de connexion:", errorData);
+        // Provide a more user-friendly default message
+        throw errorData.message ? errorData : new Error("Échec de la connexion. Vérifiez vos identifiants.");
     }
 };
 
-// Fonction pour la déconnexion
+/**
+ * Logs out the current user by clearing localStorage.
+ */
 export const logout = () => {
-    // Supprimer les informations de l'utilisateur du localStorage
+    console.log("Logging out - clearing auth data.");
     localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userId');
-    // Rediriger vers la page de connexion ou d'accueil
-    // (généralement géré dans le composant où logout est appelé)
+    // Navigation should be handled by the component calling logout
 };
 
-// --- Fonctions pour les appels API authentifiés ---
+// --- Authenticated API Call Functions ---
 
-// Fonction pour récupérer les infos du client connecté
+/**
+ * Fetches information for the currently logged-in client.
+ * Requires a valid JWT token.
+ * @returns {Promise<object>} Client information.
+ */
 export const getCurrentClientInfo = async () => {
     try {
-        const response = await apiClient.get('/clients/me'); // Utilise apiClient avec l'intercepteur
+        const response = await apiClient.get('/clients/me'); // Uses interceptor
         return response.data;
     } catch (error) {
-        console.error("Erreur lors de la récupération des infos client:", error.response?.data || error.message);
-         if (error.response?.status === 401 || error.response?.status === 403) {
-             // Token invalide ou expiré, déconnecter l'utilisateur
-             logout();
-             // Rediriger vers login peut être fait ici ou dans le composant appelant
-             window.location.href = '/login'; // Redirection simple pour l'exemple
-         }
-        throw error.response?.data || new Error("Impossible de récupérer les informations utilisateur");
+        const errorData = error.response?.data || { message: error.message };
+        console.error("Erreur lors de la récupération des infos client:", errorData);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+            console.warn("Unauthorized access or expired token detected. Logging out.");
+            logout(); // Clear stale auth data
+            // Removed window.location.href redirect.
+            // The calling component should handle navigation based on the error.
+            // Example in component: catch(err) { if (err.status === 401) navigate('/login'); }
+        }
+        // Re-throw the error so the calling component can handle it (e.g., show message, redirect)
+        throw errorData.message ? errorData : new Error("Impossible de récupérer les informations utilisateur.");
     }
 };
 
-// Exportez l'instance apiClient si vous en avez besoin ailleurs
-export { apiClient };
+// --- Export Axios instance if needed elsewhere ---
+export { apiClient }; // Export the instance configured with the interceptor
