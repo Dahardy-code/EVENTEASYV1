@@ -49,7 +49,7 @@ INSERT INTO service (titre, description, prix, categorie, prestataire_id) VALUES
 -- client_id fait référence à l'ID du client (supposons 1)
 -- ====================
 INSERT INTO evenement (nom, description, date_evenement, lieu, client_id) VALUES
-    ('Mariage de Taha', 'Mariage organisé à Rabat.', '2025-05-01', 'Rabat', 1);
+    ('Mariage de N', 'Mariage organisé à Rabat.', '2025-05-01', 'Rabat', 1);
 
 -- ====================
 -- INSERT RESERVATION

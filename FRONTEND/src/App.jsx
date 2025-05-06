@@ -1,136 +1,98 @@
 // src/App.jsx
-import React, { useState, useEffect } from 'react'; // Added useState, useEffect
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // --- Page Imports ---
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ClientDashboard from './pages/client/Dashboard';
-import HomePage from './pages/HomePage'; // <-- Import the new Home Page
-// Import other dashboards when you create them
-// import PrestataireDashboard from './pages/prestataire/Dashboard';
-// import AdminDashboard from './pages/admin/Dashboard';
+import HomePage from './pages/HomePage';
+// *** DÉCOMMENTER L'IMPORT ***
+import PrestataireDashboard from './pages/prestataire/Dashboard';
+// import AdminDashboard from './pages/admin/Dashboard'; // Décommentez quand prêt
 
 // --- Component Imports ---
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
-// --- Protected Route Component ---
-// This component checks for authentication and role before rendering nested routes
+// --- Protected Route Component (Identique) ---
 const ProtectedRoute = ({ allowedRoles }) => {
     const token = localStorage.getItem('authToken');
     const userRole = localStorage.getItem('userRole');
 
     if (!token) {
-        // If no token, redirect to login page immediately
         console.log("ProtectedRoute: No token, redirecting to /login");
         return <Navigate to="/login" replace />;
     }
-
     if (allowedRoles && !allowedRoles.includes(userRole)) {
-        // If token exists but role doesn't match, redirect to home page
-        // (User is logged in, just not authorized for *this* specific page)
         console.warn(`ProtectedRoute: Role mismatch. User: ${userRole}, Allowed: ${allowedRoles}. Redirecting to /`);
-        return <Navigate to="/" replace />; // Redirect to home page
+        return <Navigate to="/" replace />;
     }
-
-    // Token exists and role is allowed (or no specific roles required)
-    // Render the component specified in the nested Route (e.g., <ClientDashboard />)
     console.log(`ProtectedRoute: Access granted for role ${userRole} to routes needing ${allowedRoles || 'any role'}`);
-    return <Outlet />; // Renders the nested child route component
+    return <Outlet />;
 };
 
 
 // --- Main App Component ---
 function App() {
-    // State to track authentication status for conditional rendering of '/'
-    // Initialize from localStorage for initial load
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
 
-    // Effect to update authentication state if localStorage changes (e.g., login/logout in another tab)
-    // This helps keep the root route '/' logic more responsive
     useEffect(() => {
         const checkAuthStatus = () => {
-            setIsAuthenticated(!!localStorage.getItem('authToken'));
+            const currentAuth = !!localStorage.getItem('authToken');
+            // Mettre à jour seulement si l'état change réellement
+            setIsAuthenticated(prev => prev === currentAuth ? prev : currentAuth);
         };
-
-        window.addEventListener('storage', checkAuthStatus); // Listen for changes from other tabs
-        window.addEventListener('focus', checkAuthStatus);   // Re-check when tab gains focus
-
-        // Initial check in case localStorage changed before listener attached
+        window.addEventListener('storage', checkAuthStatus);
+        window.addEventListener('focus', checkAuthStatus);
         checkAuthStatus();
-
-        // Cleanup listener on component unmount
         return () => {
             window.removeEventListener('storage', checkAuthStatus);
             window.removeEventListener('focus', checkAuthStatus);
         };
-    }, []); // Empty dependency array ensures this runs only once on mount/unmount
+    }, []); // Tableau vide OK ici
 
     return (
         <Router>
-            {/* Use Flexbox to ensure Footer stays at the bottom */}
             <div className="flex flex-col min-h-screen">
                 <Navbar />
-
-                {/* Main content area that grows */}
                 <main className="flex-grow">
-                    {/* Optional: Add a general container for padding etc. if desired */}
-                    {/* <div className="container mx-auto px-4 py-6"> */}
-                        <Routes>
-                            {/* --- Public Routes --- */}
-                            {/* Login and Register are always accessible */}
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/register" element={<Register />} />
+                    <Routes>
+                        {/* --- Public Routes --- */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
 
-                            {/* --- Root Route (Conditional Home/Login) --- */}
-                            <Route
-                                path="/"
-                                element={
-                                    isAuthenticated ? (
-                                        <HomePage /> // Show HomePage if authenticated
-                                    ) : (
-                                        <Navigate to="/login" replace /> // Redirect to Login if not
-                                    )
-                                }
-                            />
-                             {/* Optional: Add more public routes here if needed (e.g., /about, /contact) */}
-                             {/* <Route path="/about" element={<AboutPage />} /> */}
+                        {/* --- Root Route --- */}
+                        <Route
+                            path="/"
+                            element={isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />}
+                        />
 
+                        {/* --- Protected Routes --- */}
+                        {/* CLIENT */}
+                        <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
+                            <Route path="/client/dashboard" element={<ClientDashboard />} />
+                            {/* Autres routes CLIENT */}
+                        </Route>
 
-                            {/* --- Protected Routes --- */}
-                            {/* Routes requiring CLIENT role */}
-                            <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
-                                <Route path="/client/dashboard" element={<ClientDashboard />} />
-                                {/* TODO: Add other client routes here, e.g.: */}
-                                {/* <Route path="/client/reservations" element={<ClientReservationsPage />} /> */}
-                                {/* <Route path="/client/profile" element={<ClientProfilePage />} /> */}
-                                {/* <Route path="/browse-events" element={<BrowseEventsPage />} /> */} {/* If browsing requires login */}
+                        {/* PRESTATAIRE */}
+                        <Route element={<ProtectedRoute allowedRoles={['PRESTATAIRE']} />}>
+                            {/* *** DÉCOMMENTER LA ROUTE *** */}
+                            <Route path="/prestataire/dashboard" element={<PrestataireDashboard />} />
+                            {/* TODO: Ajoutez ici les autres routes spécifiques au prestataire */}
+                            {/* <Route path="/prestataire/services" element={<ManageServicesPage />} /> */}
+                        </Route>
 
-                            </Route>
+                        {/* ADMIN */}
+                        {/* <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}> */}
+                            {/* <Route path="/admin/dashboard" element={<AdminDashboard />} /> */}
+                            {/* Autres routes ADMIN */}
+                        {/* </Route> */}
 
-                            {/* Routes requiring PRESTATAIRE role */}
-                            <Route element={<ProtectedRoute allowedRoles={['PRESTATAIRE']} />}>
-                                {/* TODO: Create and import PrestataireDashboard */}
-                                {/* <Route path="/prestataire/dashboard" element={<PrestataireDashboard />} /> */}
-                                {/* TODO: Add other prestataire routes here */}
-                            </Route>
-
-                            {/* Routes requiring ADMIN role */}
-                            <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                                {/* TODO: Create and import AdminDashboard */}
-                                {/* <Route path="/admin/dashboard" element={<AdminDashboard />} /> */}
-                                {/* TODO: Add other admin routes here */}
-                            </Route>
-
-                            {/* --- Fallback Route --- */}
-                            {/* Redirect any unmatched routes to the home page */}
-                            <Route path="*" element={<Navigate to="/" replace />} />
-
-                        </Routes>
-                    {/* </div> */}
+                        {/* --- Fallback Route --- */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
                 </main>
-
                 <Footer />
             </div>
         </Router>
