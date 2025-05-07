@@ -1,4 +1,9 @@
 package com.eventeasyv1.service;
 
+import java.util.List;
+
 public class RecommendationService {
+    public List<?> getRecommendations() {
+        return null;
+    }
 }

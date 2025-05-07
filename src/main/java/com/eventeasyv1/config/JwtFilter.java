@@ -45,17 +45,15 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String requestUri = request.getRequestURI(); // Obtenir l'URI pour les logs
+        final String requestUri = request.getRequestURI();
         final String authorizationHeader = request.getHeader("Authorization");
         final String bearerPrefix = "Bearer ";
 
         String username = null;
         String jwt = null;
 
-        // Log entrée filtre
         log.trace("JwtFilter processing request for: {}", requestUri);
 
-        // 1. Extraire le JWT
         if (authorizationHeader != null && authorizationHeader.startsWith(bearerPrefix)) {
             jwt = authorizationHeader.substring(bearerPrefix.length());
             try {
@@ -78,7 +76,6 @@ public class JwtFilter extends OncePerRequestFilter {
             log.trace("No Authorization Bearer header found for URI: {}", requestUri);
         }
 
-        // 2. Valider et mettre en place l'authentification SI username trouvé ET pas déjà authentifié
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             log.debug("Attempting token validation for user '{}', URI: {}", username, requestUri);
             try {
@@ -95,7 +92,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
             } catch (UsernameNotFoundException e) {
                 log.warn("User '{}' found in token but not found by UserDetailsService for URI: {}", username, requestUri);
-                // Ne pas définir d'authentification si l'utilisateur n'est pas trouvé
             } catch (Exception e) {
                 log.error("Error during UserDetailsService call or token validation for user '{}', URI: {}", username, requestUri, e);
             }
@@ -105,7 +101,6 @@ public class JwtFilter extends OncePerRequestFilter {
             log.trace("No username extracted or SecurityContext already populated, proceeding without setting auth for URI: {}", requestUri);
         }
 
-        // 3. Continuer la chaîne de filtres
         log.trace("Proceeding with filter chain for URI: {}", requestUri);
         filterChain.doFilter(request, response);
     }

@@ -1,53 +1,54 @@
 package com.eventeasyv1.entities;
 
-// Corrected imports for Spring Boot 3+ / Jakarta EE
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-// Add other jakarta.persistence imports if needed (e.g., @GeneratedValue, @Column)
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.ToString;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
+@Table(name = "service")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Service {
 
     @Id
-    // Consider adding @GeneratedValue if you want the ID generated automatically
-    // e.g., @GeneratedValue(strategy = GenerationType.IDENTITY)
-    // If so, you'll need: import jakarta.persistence.GeneratedValue;
-    //                     import jakarta.persistence.GenerationType;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String nom;
+
+    @Column(name = "titre", length = 150)
+    private String titre;
+
+    @Lob
+    @Column(name = "description")
     private String description;
-    private double prix;
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
+    @Column(name = "prix", precision = 10, scale = 2)
+    private BigDecimal prix;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @Column(name = "categorie", length = 100)
+    private String categorie;
 
-    public String getNom() {
-        return nom;
-    }
+    // Relation vers le Prestataire qui offre ce service
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prestataire_id", nullable = false)
+    @ToString.Exclude
+    private Prestataire prestataire;
 
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
+    // Relation inverse vers les Réservations pour ce service
+    @OneToMany(mappedBy = "service", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Reservation> reservations = new ArrayList<>();
 
-    public String getDescription() {
-        return description;
-    }
+    // Relation inverse vers les Avis pour ce service
+    @OneToMany(mappedBy = "service", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Avis> avis = new ArrayList<>();
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public double getPrix() {
-        return prix;
-    }
-
-    public void setPrix(double prix) {
-        this.prix = prix;
-    }
+    // Ajoutez d'autres champs si nécessaire (ex: images, note moyenne...)
 }

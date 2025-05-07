@@ -1,17 +1,14 @@
 package com.eventeasyv1.service;
 
-import com.eventeasyv1.dao.AdminRepository;
-import com.eventeasyv1.entities.Administrateur;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+// Importez les DTOs nécessaires (ex: UserDto, OfferDto etc.)
 
-@Service
-public class AdministrateurService {
+import java.util.List;
 
-    @Autowired
-    private AdminRepository adminRepository;
-
-    public Administrateur getAdministrateurByEmail(String email) {
-        return adminRepository.findByEmail(email);
-    }
+public interface AdministrateurService {
+    // Exemple de méthodes
+    // List<UserDto> getAllUsers(Pageable pageable);
+    // UserDto getUserById(Long id);
+    // void deleteUser(Long id);
+    // OfferDto validateOffer(Long offerId);
+    // ... autres méthodes de gestion admin ...
 }

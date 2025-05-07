@@ -12,7 +12,8 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
-    <groupId>com.eventeasy</groupId>
+    <!-- Utiliser com.eventeasyv1 comme groupId est une meilleure pratique -->
+    <groupId>com.eventeasyv1</groupId>
     <artifactId>EVENTEASYV1</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>EVENTEASYV1</name>
@@ -22,52 +23,50 @@
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- Versions spécifiques pour contrôle -->
         <jjwt.version>0.12.5</jjwt.version>
-        <springdoc.version>2.5.0</springdoc.version>
-        <google.maps.version>2.2.0</google.maps.version>
-        <!-- Explicitly define lombok version if needed, often managed by parent -->
         <lombok.version>1.18.32</lombok.version>
     </properties>
 
     <dependencies>
-        <!-- Spring Boot -->
+        <!-- Spring Boot Starters Core -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <!-- Optionnel mais utile -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Spring Web -->
+        <!-- *** DÉPENDANCE MAIL AJOUTÉE ICI *** -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
+        <!-- ************************************ -->
 
-        <!-- Spring Data JPA -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-
-        <!-- Spring Security -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
-        <!-- Validation -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-        <!-- MySQL Connector -->
+        <!-- Base de Données -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JJWT -->
+        <!-- JJWT (JSON Web Token) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -81,7 +80,7 @@
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
+            <artifactId>jjwt-jackson</artifactId> <!-- ou jjwt-gson -->
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -90,7 +89,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version> <!-- Explicit version -->
+            <version>${lombok.version}</version>
             <optional>true</optional>
         </dependency>
 
@@ -108,53 +107,13 @@
 
     </dependencies>
 
-    <repositories>
-        <repository>
-            <id>central</id>
-            <name>Maven Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>central</id>
-            <name>Maven Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
+    <!-- Pas besoin de repositories/pluginRepositories pour Maven Central -->
 
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <!-- Version typically managed by parent -->
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                    <encoding>${project.build.sourceEncoding}</encoding>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version> <!-- Consistent version -->
-                        </path>
-                        <!-- Add other annotation processors if needed -->
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <!-- Version managed by parent -->
                 <configuration>
                     <excludes>
                         <exclude>
@@ -163,6 +122,7 @@
                         </exclude>
                     </excludes>
                 </configuration>
+                <!-- L'exécution est souvent implicite mais peut être ajoutée -->
                 <executions>
                     <execution>
                         <goals>
@@ -174,8 +134,29 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <!-- La version est gérée par le parent -->
+                <configuration>
+                    <!-- Source/Target sont dans properties -->
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <!-- Ajoutez d'autres processeurs d'annotations ici si nécessaire -->
+                    </annotationProcessorPaths>
+                    <compilerArgs>--enable-preview</compilerArgs>
+                    <source>21</source>
+                    <target>21</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <!-- Version managed by parent -->
+                <!-- Version gérée par le parent -->
                 <configuration>
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>

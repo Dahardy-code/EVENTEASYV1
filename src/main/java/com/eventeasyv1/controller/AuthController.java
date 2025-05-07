@@ -19,69 +19,66 @@ import org.springframework.web.server.ResponseStatusException;
 public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-
     private final AuthService authService;
 
     @Autowired
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
+    public AuthController(AuthService authService) { this.authService = authService; }
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
-        log.info("Requête de connexion reçue pour l'email: {}", loginRequest.getEmail());
+        log.info("Requête login: {}", loginRequest.getEmail());
         try {
-            AuthResponse authResponse = authService.loginUser(loginRequest);
-            log.info("Connexion réussie pour: {}", loginRequest.getEmail());
-            return ResponseEntity.ok(authResponse);
+            AuthResponse res = authService.loginUser(loginRequest);
+            log.info("Login réussi: {}", loginRequest.getEmail());
+            return ResponseEntity.ok(res);
         } catch (BadCredentialsException e) {
-            log.warn("Échec de la connexion pour {}: {}", loginRequest.getEmail(), e.getMessage());
+            log.warn("Échec login: {}", loginRequest.getEmail());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe incorrect.", e);
         } catch (Exception e) {
-            log.error("Erreur inattendue lors de la connexion pour {}: {}", loginRequest.getEmail(), e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne lors de la connexion.", e);
+            log.error("Erreur login: {}", loginRequest.getEmail(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne.", e);
         }
     }
 
     @PostMapping("/register/client")
-    public ResponseEntity<?> registerClient(@Valid @RequestBody RegisterRequest registerRequest) {
-        log.info("Requête d'inscription reçue pour un client: {}", registerRequest.getEmail());
+    public ResponseEntity<?> registerClient(@Valid @RequestBody RegisterRequest req) {
+        log.info("Requête register client: {}", req.getEmail());
         try {
-            AuthResponse authResponse = authService.registerClient(registerRequest);
-            log.info("Inscription client réussie pour: {}", registerRequest.getEmail());
-            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
+            AuthResponse res = authService.registerClient(req);
+            log.info("Register client réussi: {}", req.getEmail());
+            return ResponseEntity.status(HttpStatus.CREATED).body(res);
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("email est déjà utilisé")) {
-                log.warn("Échec de l'inscription client (email existant) pour {}: {}", registerRequest.getEmail(), e.getMessage());
+                log.warn("Échec register client (email): {}", req.getEmail());
                 throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage(), e);
             } else {
-                log.error("Erreur Runtime lors de l'inscription client pour {}: {}", registerRequest.getEmail(), e.getMessage(), e);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne lors de l'inscription.", e);
+                log.error("Erreur runtime register client: {}", req.getEmail(), e);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne inscription.", e);
             }
         } catch (Exception e) {
-            log.error("Erreur Exception générale lors de l'inscription client pour {}: {}", registerRequest.getEmail(), e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne générale lors de l'inscription.", e);
+            log.error("Erreur générale register client: {}", req.getEmail(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne générale.", e);
         }
     }
 
     @PostMapping("/register/prestataire")
-    public ResponseEntity<?> registerPrestataire(@Valid @RequestBody RegisterRequest registerRequest) {
-        log.info("Requête d'inscription reçue pour un prestataire: {}", registerRequest.getEmail());
+    public ResponseEntity<?> registerPrestataire(@Valid @RequestBody RegisterRequest req) {
+        log.info("Requête register prestataire: {}", req.getEmail());
         try {
-            AuthResponse authResponse = authService.registerPrestataire(registerRequest);
-            log.info("Inscription prestataire réussie pour: {}", registerRequest.getEmail());
-            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
+            AuthResponse res = authService.registerPrestataire(req);
+            log.info("Register prestataire réussi: {}", req.getEmail());
+            return ResponseEntity.status(HttpStatus.CREATED).body(res);
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("email est déjà utilisé")) {
-                log.warn("Échec de l'inscription prestataire (email existant) pour {}: {}", registerRequest.getEmail(), e.getMessage());
+                log.warn("Échec register prestataire (email): {}", req.getEmail());
                 throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage(), e);
             } else {
-                log.error("Erreur Runtime lors de l'inscription prestataire pour {}: {}", registerRequest.getEmail(), e.getMessage(), e);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne lors de l'inscription.", e);
+                log.error("Erreur runtime register prestataire: {}", req.getEmail(), e);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne inscription.", e);
             }
         } catch (Exception e) {
-            log.error("Erreur Exception générale lors de l'inscription prestataire pour {}: {}", registerRequest.getEmail(), e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne générale lors de l'inscription.", e);
+            log.error("Erreur générale register prestataire: {}", req.getEmail(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne générale.", e);
         }
     }
 }
