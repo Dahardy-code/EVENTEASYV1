@@ -1,0 +1,12 @@
+#!/bin/bash
+
+output="archive.txt"
+> "$output"  # Clear output file
+
+find . -type f ! -path "./node_modules/*" | while read -r file; do
+  echo "===== $file =====" >> "$output"
+  cat "$file" >> "$output"
+  echo -e "\n" >> "$output"
+done
+
+echo "All files (except node_modules) archived in $output"
