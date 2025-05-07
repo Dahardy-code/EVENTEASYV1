@@ -6,30 +6,30 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 @Entity
-@Table(name = "utilisateur")
-@Inheritance(strategy = InheritanceType.JOINED) // Stratégie pour l'héritage
-@DiscriminatorColumn(name = "role", discriminatorType = DiscriminatorType.STRING) // Colonne pour différencier les rôles
+@Table(name = "utilisateur") // Table de base pour les champs communs
+@Inheritance(strategy = InheritanceType.JOINED) // Stratégie pour tables séparées liées par ID
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Utilisateur {
+// 'abstract' car un utilisateur doit être un Client, Prestataire, ou Admin
+public abstract class Utilisateur {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // L'ID est généré dans cette table
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "nom")
     private String nom;
 
-    @Column(nullable = false)
+    @Column(name = "prenom")
     private String prenom;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "email", unique = true) // unique = true correspond au schéma
     private String email;
 
-    @Column(name = "mot_de_passe", nullable = false)
-    private String password; // Renommé en password pour la clarté avec Spring Security
+    @Column(name = "mot_de_passe") // Mapper explicitement le nom de colonne DB
+    private String password; // Nom du champ Java peut rester 'password'
 
-    @Column(name = "role", insertable = false, updatable = false) // Mappé par DiscriminatorColumn
-    private String role;
+    // La colonne 'role' n'est PAS mappée ici avec JOINED.
+    // Le type (et donc le rôle implicite) est déterminé par la table jointe.
 }

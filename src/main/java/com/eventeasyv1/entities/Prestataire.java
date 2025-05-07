@@ -1,25 +1,58 @@
-// src/main/java/com/eventeasyv1/entities/Prestataire.java
 package com.eventeasyv1.entities;
 
-import jakarta.persistence.*; // Import the whole package or specific annotations
-import lombok.Data; // Assuming you use Lombok for getters/setters
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.List;
+// Assurez-vous que cet import est bien présent
+import com.eventeasyv1.entities.Service;
+// Importez d'autres entités liées si vous décommentez leurs relations
+// import com.eventeasyv1.entities.Disponibilite;
 
 @Entity
-@Data // Add if you use Lombok, otherwise keep manual getters/setters
-public class Prestataire {
+@Table(name = "prestataire")
+@PrimaryKeyJoinColumn(name = "id")
+@Data
+// Exclure les collections des méthodes générées par Lombok pour éviter les problèmes
+@EqualsAndHashCode(callSuper = true, exclude = {"services", "disponibilites"})
+@NoArgsConstructor
+@AllArgsConstructor
+public class Prestataire extends Utilisateur {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Good practice for auto-generated IDs
-    private Long id;
-    private String nom;
-    private String email;
-    private String téléphone;
+    @Column(name = "nom_entreprise")
+    private String nomEntreprise;
+
+    @Column(name = "categorie_service")
+    private String categorieService;
+
+    @Column(name = "adresse")
     private String adresse;
 
-    // Remove manual getters/setters if using @Data
-    /*
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    // ... other getters/setters
-    */
+    @Column(name = "numero_tel")
+    private String numeroTel;
+
+    // --- Relations ---
+    @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @ToString.Exclude // Exclure de toString pour éviter les boucles
+    private List<Service> services = new ArrayList<>();
+
+    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    // @ToString.Exclude
+    // private List<Disponibilite> disponibilites = new ArrayList<>();
+
+    @Override
+    public String toString() {
+        return "Prestataire{" +
+                "id=" + getId() +
+                ", nomEntreprise='" + nomEntreprise + '\'' +
+                ", categorieService='" + categorieService + '\'' +
+                ", servicesCount=" + (services != null ? services.size() : 0) +
+                // ", disponibilitesCount=" + (disponibilites != null ? disponibilites.size() : 0) +
+                "} " + super.toString();
+    }
 }

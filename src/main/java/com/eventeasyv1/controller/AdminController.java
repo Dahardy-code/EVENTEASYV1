@@ -1,34 +1,34 @@
 package com.eventeasyv1.controller;
 
-import com.eventeasyv1.dao.AdminRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize; // Pour la sécurité au niveau méthode
+import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+// TODO: Importer les services Admin nécessaires
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping("/api/admin") // Préfixe pour les routes admin
+// @PreAuthorize("hasRole('ADMIN')") // Alternative: Sécuriser toute la classe
 public class AdminController {
 
-    @Autowired
-    private AdminRepository userRepository;
+    // TODO: Injecter les services nécessaires (AdminService, UtilisateurService, etc.)
+    // @Autowired
+    // private AdminService adminService;
 
-    @GetMapping("/stats")
-    public ResponseEntity<?> getStats() {
-        long totalUsers = userRepository.count();
-        long activeUsers = userRepository.countByActive(true);
-        long inactiveUsers = userRepository.countByActive(false);
-
-        // Retourner les statistiques sous forme de réponse JSON
-        Map<String, Long> stats = new HashMap<>();
-        stats.put("totalUsers", totalUsers);
-        stats.put("activeUsers", activeUsers);
-        stats.put("inactiveUsers", inactiveUsers);
-
-        return ResponseEntity.ok(stats);
+    // Exemple d'endpoint admin
+    @GetMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')") // Sécuriser la méthode
+    public ResponseEntity<?> getAllUsers() {
+        // TODO: Implémenter la logique pour récupérer tous les utilisateurs (avec pagination)
+        return ResponseEntity.ok("Liste des utilisateurs (TODO)");
     }
+
+    @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        // TODO: Implémenter la logique pour supprimer un utilisateur
+        return ResponseEntity.ok("Utilisateur " + id + " supprimé (TODO)");
+    }
+
+    // Ajoutez d'autres endpoints pour la gestion des offres, des réservations, etc.
 }

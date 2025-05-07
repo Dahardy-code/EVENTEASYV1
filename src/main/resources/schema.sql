@@ -1,43 +1,69 @@
+-- Script pour supprimer et recréer les tables de la base EVENTEASYV1
+-- ATTENTION : CECI SUPPRIME TOUTES LES DONNÉES EXISTANTES !
+
+-- Désactiver temporairement les vérifications de clés étrangères pour permettre la suppression
+SET FOREIGN_KEY_CHECKS=0;
+
+-- Supprimer les tables si elles existent (dans l'ordre inverse des dépendances)
+DROP TABLE IF EXISTS paiement;
+DROP TABLE IF EXISTS avis;
+DROP TABLE IF EXISTS invitation;
+DROP TABLE IF EXISTS reservation;
+DROP TABLE IF EXISTS evenement;
+DROP TABLE IF EXISTS disponibilite;
+DROP TABLE IF EXISTS service;
+DROP TABLE IF EXISTS administrateur;
+DROP TABLE IF EXISTS prestataire;
+DROP TABLE IF EXISTS client;
+DROP TABLE IF EXISTS notification;
+DROP TABLE IF EXISTS promo;
+DROP TABLE IF EXISTS statistique;
+DROP TABLE IF EXISTS utilisateur; -- Supprimer la table utilisateur en dernier
+
+-- Réactiver les vérifications de clés étrangères
+SET FOREIGN_KEY_CHECKS=1;
+
+-- Recréer les tables avec le schéma corrigé (Option 1)
+
 -- ====================
--- TABLE UTILISATEUR
+-- TABLE UTILISATEUR (CORRIGÉE - SANS COLONNE 'role')
 -- ====================
 CREATE TABLE utilisateur (
                              id BIGINT PRIMARY KEY AUTO_INCREMENT,
                              nom VARCHAR(100),
                              prenom VARCHAR(100),
                              email VARCHAR(100) UNIQUE,
-                             mot_de_passe VARCHAR(255),
-                             role VARCHAR(50)
+                             mot_de_passe VARCHAR(255)
 );
 
 -- ====================
 -- TABLE CLIENT
 -- ====================
 CREATE TABLE client (
-                        id BIGINT PRIMARY KEY,
+                        id BIGINT PRIMARY KEY, -- Référence utilisateur.id
                         date_inscription DATE,
-                        FOREIGN KEY (id) REFERENCES utilisateur(id)
+                        FOREIGN KEY (id) REFERENCES utilisateur(id) ON DELETE CASCADE
 );
 
 -- ====================
 -- TABLE PRESTATAIRE
 -- ====================
 CREATE TABLE prestataire (
-                             id BIGINT PRIMARY KEY,
+                             id BIGINT PRIMARY KEY, -- Référence utilisateur.id
                              nom_entreprise VARCHAR(150),
                              categorie_service VARCHAR(100),
                              adresse VARCHAR(255),
                              numero_tel VARCHAR(50),
-                             FOREIGN KEY (id) REFERENCES utilisateur(id)
+                             FOREIGN KEY (id) REFERENCES utilisateur(id) ON DELETE CASCADE
 );
 
 -- ====================
 -- TABLE ADMINISTRATEUR
 -- ====================
 CREATE TABLE administrateur (
-                                id BIGINT PRIMARY KEY,
+                                id BIGINT PRIMARY KEY, -- Référence utilisateur.id
                                 privileges VARCHAR(255),
-                                FOREIGN KEY (id) REFERENCES utilisateur(id)
+                                FOREIGN KEY (id) REFERENCES utilisateur(id) ON DELETE CASCADE
 );
 
 -- ====================
@@ -50,7 +76,20 @@ CREATE TABLE service (
                          prix DECIMAL(10,2),
                          categorie VARCHAR(100),
                          prestataire_id BIGINT,
-                         FOREIGN KEY (prestataire_id) REFERENCES prestataire(id)
+                         FOREIGN KEY (prestataire_id) REFERENCES prestataire(id) ON DELETE CASCADE
+);
+
+-- ====================
+-- TABLE EVENEMENT (Créer avant Invitation et Reservation si lié)
+-- ====================
+CREATE TABLE evenement (
+                           id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                           nom VARCHAR(150),
+                           description TEXT,
+                           date_evenement DATE,
+                           lieu VARCHAR(255),
+                           client_id BIGINT,
+                           FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE CASCADE -- Ou SET NULL
 );
 
 -- ====================
@@ -62,8 +101,8 @@ CREATE TABLE reservation (
                              statut VARCHAR(50),
                              client_id BIGINT,
                              service_id BIGINT,
-                             FOREIGN KEY (client_id) REFERENCES client(id),
-                             FOREIGN KEY (service_id) REFERENCES service(id)
+                             FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE SET NULL,
+                             FOREIGN KEY (service_id) REFERENCES service(id) ON DELETE SET NULL
 );
 
 -- ====================
@@ -75,7 +114,7 @@ CREATE TABLE paiement (
                           date_paiement DATETIME,
                           mode_paiement VARCHAR(50),
                           reservation_id BIGINT,
-                          FOREIGN KEY (reservation_id) REFERENCES reservation(id)
+                          FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE SET NULL
 );
 
 -- ====================
@@ -88,8 +127,8 @@ CREATE TABLE avis (
                       date_avis DATETIME,
                       client_id BIGINT,
                       service_id BIGINT,
-                      FOREIGN KEY (client_id) REFERENCES client(id),
-                      FOREIGN KEY (service_id) REFERENCES service(id)
+                      FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE SET NULL,
+                      FOREIGN KEY (service_id) REFERENCES service(id) ON DELETE SET NULL
 );
 
 -- ====================
@@ -100,7 +139,7 @@ CREATE TABLE notification (
                               message TEXT,
                               date_envoi DATETIME,
                               utilisateur_id BIGINT,
-                              FOREIGN KEY (utilisateur_id) REFERENCES utilisateur(id)
+                              FOREIGN KEY (utilisateur_id) REFERENCES utilisateur(id) ON DELETE CASCADE
 );
 
 -- ====================
@@ -124,7 +163,7 @@ CREATE TABLE disponibilite (
                                heure_debut TIME,
                                heure_fin TIME,
                                prestataire_id BIGINT,
-                               FOREIGN KEY (prestataire_id) REFERENCES prestataire(id)
+                               FOREIGN KEY (prestataire_id) REFERENCES prestataire(id) ON DELETE CASCADE
 );
 
 -- ====================
@@ -137,21 +176,10 @@ CREATE TABLE invitation (
                             date_envoi DATETIME,
                             client_id BIGINT,
                             evenement_id BIGINT,
-                            FOREIGN KEY (client_id) REFERENCES client(id)
+                            FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE SET NULL,
+                            FOREIGN KEY (evenement_id) REFERENCES evenement(id) ON DELETE CASCADE
 );
 
--- ====================
--- TABLE EVENEMENT
--- ====================
-CREATE TABLE evenement (
-                           id BIGINT PRIMARY KEY AUTO_INCREMENT,
-                           nom VARCHAR(150),
-                           description TEXT,
-                           date_evenement DATE,
-                           lieu VARCHAR(255),
-                           client_id BIGINT,
-                           FOREIGN KEY (client_id) REFERENCES client(id)
-);
 
 -- ====================
 -- TABLE STATISTIQUE
@@ -162,3 +190,6 @@ CREATE TABLE statistique (
                              valeur DECIMAL(10,2),
                              date_statistique DATE
 );
+
+-- Afficher un message de succès (optionnel, dépend de l'outil SQL)
+-- SELECT 'Tables dropped and recreated successfully.' as '';
