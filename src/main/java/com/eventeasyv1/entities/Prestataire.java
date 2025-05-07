@@ -5,41 +5,54 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.ToString;
 
-// Importez List si vous décommentez les relations
-// import java.util.List;
+import java.util.ArrayList;
+import java.util.List;
+// Assurez-vous que cet import est bien présent
+import com.eventeasyv1.entities.Service;
+// Importez d'autres entités liées si vous décommentez leurs relations
+// import com.eventeasyv1.entities.Disponibilite;
 
 @Entity
-@Table(name = "prestataire") // *** Pointe vers la table spécifique 'prestataire' ***
-@PrimaryKeyJoinColumn(name = "id") // *** Indique que 'id' est PK et FK vers utilisateur.id ***
-// On ne met PAS @DiscriminatorValue avec JOINED
+@Table(name = "prestataire")
+@PrimaryKeyJoinColumn(name = "id")
 @Data
-@EqualsAndHashCode(callSuper = true)
+// Exclure les collections des méthodes générées par Lombok pour éviter les problèmes
+@EqualsAndHashCode(callSuper = true, exclude = {"services", "disponibilites"})
 @NoArgsConstructor
 @AllArgsConstructor
 public class Prestataire extends Utilisateur {
 
-    // L'ID est hérité et géré par @PrimaryKeyJoinColumn
-
-    // Mappages explicites des colonnes spécifiques
-    @Column(name = "nom_entreprise", nullable = true)
+    @Column(name = "nom_entreprise")
     private String nomEntreprise;
 
-    @Column(name = "categorie_service", nullable = true)
+    @Column(name = "categorie_service")
     private String categorieService;
 
-    @Column(name = "adresse", nullable = true)
+    @Column(name = "adresse")
     private String adresse;
 
-    @Column(name = "numero_tel", nullable = true)
+    @Column(name = "numero_tel")
     private String numeroTel;
 
     // --- Relations ---
-    // Ces relations utilisent 'prestataire_id' qui est défini dans les tables
-    // service et disponibilite, donc le mappedBy devrait fonctionner.
-    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    // private List<Service> services;
+    @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @ToString.Exclude // Exclure de toString pour éviter les boucles
+    private List<Service> services = new ArrayList<>();
 
-    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    // private List<Disponibilite> disponibilites;
+    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    // @ToString.Exclude
+    // private List<Disponibilite> disponibilites = new ArrayList<>();
+
+    @Override
+    public String toString() {
+        return "Prestataire{" +
+                "id=" + getId() +
+                ", nomEntreprise='" + nomEntreprise + '\'' +
+                ", categorieService='" + categorieService + '\'' +
+                ", servicesCount=" + (services != null ? services.size() : 0) +
+                // ", disponibilitesCount=" + (disponibilites != null ? disponibilites.size() : 0) +
+                "} " + super.toString();
+    }
 }

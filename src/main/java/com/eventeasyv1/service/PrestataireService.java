@@ -1,112 +1,170 @@
 package com.eventeasyv1.service;
 
-import com.eventeasyv1.dao.PrestataireRepository; // Use PrestataireRepository
-import com.eventeasyv1.dto.PrestataireDto;      // Use PrestataireDto
-import com.eventeasyv1.entities.Prestataire;    // Use Prestataire entity
-import com.eventeasyv1.entities.Utilisateur;    // May need Utilisateur if fetching from base repo
-import com.eventeasyv1.dao.UtilisateurRepository; // Optional: If fetching from base repository
+import com.eventeasyv1.dao.PrestataireRepository;
+import com.eventeasyv1.dao.ServiceRepository;
+import com.eventeasyv1.dao.DisponibiliteRepository;
+import com.eventeasyv1.dto.PrestataireDto;
+import com.eventeasyv1.dto.ServiceDto;
+import com.eventeasyv1.dto.input.ServiceCreateUpdateDto;
+import com.eventeasyv1.entities.Prestataire;
+import com.eventeasyv1.entities.Service;
+import com.eventeasyv1.entities.Disponibilite;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Good practice for service methods reading data
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PrestataireService {
 
+    private static final Logger log = LoggerFactory.getLogger(PrestataireService.class);
+
+    private final PrestataireRepository prestataireRepository;
+    private final ServiceRepository serviceRepository;
+    private final DisponibiliteRepository disponibiliteRepository;
+
     @Autowired
-    private PrestataireRepository prestataireRepository;
-
-    // Optional: Inject UtilisateurRepository if needed for a more robust findByEmail approach
-    // @Autowired
-    // private UtilisateurRepository utilisateurRepository;
-
-    /**
-     * Retrieves the details of the currently authenticated Prestataire.
-     *
-     * @return PrestataireDto containing the details.
-     * @throws UsernameNotFoundException if the authenticated user is not found or is not a Prestataire.
-     */
-    @Transactional(readOnly = true) // Mark as transactional and read-only
-    public PrestataireDto getCurrentPrestataireDetails() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalStateException("Aucun utilisateur authentifié trouvé.");
-        }
-        String userEmail = authentication.getName(); // Gets email from authenticated principal
-
-        // --- Option 1: Using specific PrestataireRepository (simpler if Security principal is Prestataire) ---
-        Prestataire prestataire = prestataireRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("Prestataire non trouvé avec l'email: " + userEmail));
-
-        // --- Option 2: Using base UtilisateurRepository (more robust if principal is just Utilisateur) ---
-        /*
-        Utilisateur utilisateur = utilisateurRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec l'email: " + userEmail));
-
-        if (!(utilisateur instanceof Prestataire)) {
-             throw new UsernameNotFoundException("L'utilisateur connecté n'est pas un Prestataire: " + userEmail);
-        }
-        Prestataire prestataire = (Prestataire) utilisateur;
-        */
-        // --- Choose Option 1 or 2 based on your UserDetailsService implementation ---
-
-
-        return mapToDto(prestataire); // Convert entity to DTO
+    public PrestataireService(PrestataireRepository prestataireRepository,
+                              ServiceRepository serviceRepository,
+                              DisponibiliteRepository disponibiliteRepository) {
+        this.prestataireRepository = prestataireRepository;
+        this.serviceRepository = serviceRepository;
+        this.disponibiliteRepository = disponibiliteRepository;
     }
 
+    private Prestataire getCurrentAuthenticatedPrestataire() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            log.warn("Tentative d'accès getCurrentAuthenticatedPrestataire sans authentification valide.");
+            throw new IllegalStateException("Aucun utilisateur authentifié trouvé ou session expirée.");
+        }
+        String userEmail = authentication.getName();
+        return prestataireRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("Prestataire non trouvé avec l'email: " + userEmail));
+    }
 
-    /**
-     * Maps a Prestataire entity to a PrestataireDto.
-     *
-     * @param prestataire The Prestataire entity.
-     * @return The corresponding PrestataireDto.
-     */
-    private PrestataireDto mapToDto(Prestataire prestataire) {
+    @Transactional(readOnly = true)
+    public PrestataireDto getCurrentPrestataireDetails() {
+        Prestataire prestataire = getCurrentAuthenticatedPrestataire();
+        return mapPrestataireToDto(prestataire);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceDto> getMyServices() {
+        Prestataire currentPrestataire = getCurrentAuthenticatedPrestataire();
+        log.debug("Récupération des services pour le prestataire ID: {}", currentPrestataire.getId());
+        List<Service> services = serviceRepository.findByPrestataireId(currentPrestataire.getId());
+        return services.stream().map(this::mapServiceToDto).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ServiceDto addMyService(ServiceCreateUpdateDto serviceDto) {
+        Prestataire currentPrestataire = getCurrentAuthenticatedPrestataire();
+        log.info("Ajout d'un service par le prestataire ID: {}, Titre: {}", currentPrestataire.getId(), serviceDto.getTitre());
+
+        Service newService = new Service();
+        newService.setTitre(serviceDto.getTitre());
+        newService.setDescription(serviceDto.getDescription());
+        newService.setPrix(serviceDto.getPrix());
+        newService.setCategorie(serviceDto.getCategorie());
+        newService.setPrestataire(currentPrestataire);
+
+        Service savedService = serviceRepository.save(newService);
+        log.info("Service ID: {} créé avec succès pour le prestataire ID: {}", savedService.getId(), currentPrestataire.getId());
+        return mapServiceToDto(savedService);
+    }
+
+    @Transactional
+    public ServiceDto updateMyService(Long serviceId, ServiceCreateUpdateDto serviceDto) {
+        Prestataire currentPrestataire = getCurrentAuthenticatedPrestataire();
+        log.info("Mise à jour du service ID: {} par le prestataire ID: {}", serviceId, currentPrestataire.getId());
+
+        Service service = (Service) serviceRepository.findByIdAndPrestataireId(serviceId, currentPrestataire.getId())
+                .orElseThrow(() -> {
+                    log.warn("Tentative de mise à jour non autorisée du service ID: {} par le prestataire ID: {}", serviceId, currentPrestataire.getId());
+                    return new AccessDeniedException("Vous n'êtes pas autorisé à modifier ce service.");
+                });
+
+        service.setTitre(serviceDto.getTitre());
+        service.setDescription(serviceDto.getDescription());
+        service.setPrix(serviceDto.getPrix());
+        service.setCategorie(serviceDto.getCategorie());
+
+        Service updatedService = serviceRepository.save(service);
+        log.info("Service ID: {} mis à jour avec succès.", updatedService.getId());
+        return mapServiceToDto(updatedService);
+    }
+
+    @Transactional
+    public void deleteMyService(Long serviceId) {
+        Prestataire currentPrestataire = getCurrentAuthenticatedPrestataire();
+        log.info("Suppression du service ID: {} par le prestataire ID: {}", serviceId, currentPrestataire.getId());
+
+        Service service = (Service) serviceRepository.findByIdAndPrestataireId(serviceId, currentPrestataire.getId())
+                .orElseThrow(() -> {
+                    log.warn("Tentative de suppression non autorisée du service ID: {} par le prestataire ID: {}", serviceId, currentPrestataire.getId());
+                    return new AccessDeniedException("Vous n'êtes pas autorisé à supprimer ce service.");
+                });
+
+        serviceRepository.delete(service);
+        log.info("Service ID: {} supprimé avec succès.", serviceId);
+    }
+
+    private PrestataireDto mapPrestataireToDto(Prestataire prestataire) {
         PrestataireDto dto = new PrestataireDto();
-        // Map inherited fields
         dto.setId(prestataire.getId());
         dto.setNom(prestataire.getNom());
         dto.setPrenom(prestataire.getPrenom());
         dto.setEmail(prestataire.getEmail());
-        // Map specific fields
         dto.setNomEntreprise(prestataire.getNomEntreprise());
         dto.setCategorieService(prestataire.getCategorieService());
         dto.setAdresse(prestataire.getAdresse());
         dto.setNumeroTel(prestataire.getNumeroTel());
-        // Add other fields if needed in the DTO
         return dto;
     }
 
-    // --- Add other Prestataire-specific service methods ---
-    // Example: Method to get services offered by the current prestataire
-    /*
-    @Transactional(readOnly = true)
-    public List<ServiceDto> getMyServices() {
-        PrestataireDto currentPrestataire = getCurrentPrestataireDetails(); // Reuse to get ID
-        // Fetch services using prestataireRepository or a dedicated ServiceRepository
-        // List<Service> services = serviceRepository.findByPrestataireId(currentPrestataire.getId());
-        // return services.stream().map(this::mapServiceToDto).collect(Collectors.toList());
-        return Collections.emptyList(); // Placeholder
+    private ServiceDto mapServiceToDto(Service service) {
+        ServiceDto dto = new ServiceDto();
+        dto.setId(service.getId());
+        dto.setTitre(service.getTitre());
+        dto.setDescription(service.getDescription());
+        dto.setPrix(service.getPrix());
+        dto.setCategorie(service.getCategorie());
+        if (service.getPrestataire() != null) {
+            dto.setPrestataireId(service.getPrestataire().getId());
+            dto.setNomEntreprisePrestataire(service.getPrestataire().getNomEntreprise());
+        }
+        return dto;
     }
-    */
 
-    // Example: Method to update prestataire profile (requires PrestataireUpdateDto)
-     /*
-     @Transactional
-     public PrestataireDto updateProfile(PrestataireUpdateDto updateDto) {
-         PrestataireDto current = getCurrentPrestataireDetails();
-         Prestataire prestataire = prestataireRepository.findById(current.getId())
-              .orElseThrow(() -> new UsernameNotFoundException("Prestataire non trouvé pour mise à jour"));
+    public List<Object> getMyDisponibilites() {
+        Prestataire currentPrestataire = getCurrentAuthenticatedPrestataire();
+        log.debug("Récupération des disponibilités pour le prestataire ID: {}", currentPrestataire.getId());
+        List<Disponibilite> disponibilites = disponibiliteRepository.findByPrestataireId(currentPrestataire.getId());
+        return disponibilites.stream().map(this::mapDisponibiliteToDto).collect(Collectors.toList()).reversed();
+    }
 
-         // Update fields from updateDto
-         prestataire.setNomEntreprise(updateDto.getNomEntreprise());
-         // ... other fields ...
+    private Object mapDisponibiliteToDto(Disponibilite disponibilite) {
+        return null;
+    }
 
-         Prestataire saved = prestataireRepository.save(prestataire);
-         return mapToDto(saved);
-     }
-     */
-
+    public ServiceDto addService(@Valid ServiceCreateUpdateDto serviceDto) {
+        Prestataire currentPrestataire = getCurrentAuthenticatedPrestataire();
+        Service newService = new Service();
+        newService.setTitre(serviceDto.getTitre());
+        newService.setDescription(serviceDto.getDescription());
+        newService.setPrix(serviceDto.getPrix());
+        newService.setCategorie(serviceDto.getCategorie());
+        newService.setPrestataire(currentPrestataire);
+        Service savedService = serviceRepository.save(newService);
+        return mapServiceToDto(savedService);
+    }
 }

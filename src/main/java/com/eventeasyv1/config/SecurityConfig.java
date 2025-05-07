@@ -1,6 +1,6 @@
 package com.eventeasyv1.config;
 
-import com.eventeasyv1.config.JwtFilter; // Assurez-vous que le chemin est correct
+import com.eventeasyv1.config.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -51,14 +51,19 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register/client").permitAll()
                         .requestMatchers("/api/auth/register/prestataire").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/offers").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/offers").permitAll() // Endpoint public hypothétique
+                        .requestMatchers(HttpMethod.GET, "/api/events").permitAll()  // Endpoint public hypothétique
+                        .requestMatchers(HttpMethod.GET, "/api/services").permitAll() // Lister les services publiquement
+                        .requestMatchers(HttpMethod.GET, "/api/services/{id}").permitAll() // Voir détail service publiquement
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // ---- Protected ----
-                        .requestMatchers("/api/clients/me").hasRole("CLIENT")
-                        .requestMatchers("/api/prestataires/me/**").hasRole("PRESTATAIRE")
-                        .requestMatchers("/api/statistiques/admin").hasRole("ADMIN")
+                        .requestMatchers("/api/clients/me/**").hasRole("CLIENT") // Client ne peut accéder qu'à ses propres infos/actions
+                        .requestMatchers("/api/prestataires/me/**").hasRole("PRESTATAIRE") // Prestataire ne peut accéder qu'à ses propres infos/actions
+                        .requestMatchers("/api/reservations").hasRole("CLIENT") // Seul un client peut créer une réservation
+                        // Ajoutez d'autres règles... exemple:
+                        // .requestMatchers("/api/avis").hasRole("CLIENT") // Poster un avis
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/statistiques/admin").hasRole("ADMIN")
                         // ---- Fallback ----
                         .anyRequest().authenticated()
                 )
@@ -74,20 +79,18 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
+                "http://localhost:5173", // Adaptez à votre port Vite
                 "http://127.0.0.1:5173",
-                "http://localhost:3000", // Port vu dans les screenshots précédents
+                "http://localhost:3000", // Ancien port possible
                 "http://127.0.0.1:3000"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
-        // Utiliser "*" en dev est acceptable, mais être spécifique en prod est mieux
-        configuration.setAllowedHeaders(List.of("*"));
-        // configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", ...)); // Exemple Prod
+        configuration.setAllowedHeaders(List.of("*")); // Simplifié pour le dev
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/api/**", configuration); // Appliquer à /api/**
         return source;
     }
 }
