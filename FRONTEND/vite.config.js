@@ -8,4 +8,7 @@ export default defineConfig({
       '@': '/src', // Pour les imports absolus
     },
   },
+  server: {
+    port: 3000, // Ajoute cette ligne pour spécifier le port
+  },
 });

@@ -1,73 +1,100 @@
-import React from 'react';
+// src/App.jsx
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
-// Importez vos pages/composants
+// --- Page Imports ---
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ClientDashboard from './pages/client/Dashboard';
-// Importez d'autres pages (Admin, Prestataire, Accueil, etc.)
-// import HomePage from './pages/HomePage'; // Exemple
-// import AdminDashboard from './pages/admin/Dashboard';
-// import PrestataireDashboard from './pages/prestataire/Dashboard';
-import Navbar from './components/Navbar'; // Supposons que vous avez une Navbar
-import Footer from './components/Footer'; // Supposons que vous avez un Footer
+import HomePage from './pages/HomePage';
+// *** DÉCOMMENTER L'IMPORT ***
+import PrestataireDashboard from './pages/prestataire/Dashboard';
+// import AdminDashboard from './pages/admin/Dashboard'; // Décommentez quand prêt
 
-// Composant pour protéger les routes nécessitant une authentification
+// --- Component Imports ---
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+
+// --- Protected Route Component (Identique) ---
 const ProtectedRoute = ({ allowedRoles }) => {
     const token = localStorage.getItem('authToken');
-    const userRole = localStorage.getItem('userRole'); // Assurez-vous de stocker le rôle au login
+    const userRole = localStorage.getItem('userRole');
 
     if (!token) {
-        // Pas de token, rediriger vers login
+        console.log("ProtectedRoute: No token, redirecting to /login");
         return <Navigate to="/login" replace />;
     }
-
     if (allowedRoles && !allowedRoles.includes(userRole)) {
-         // Rôle non autorisé, rediriger vers une page non autorisée ou l'accueil
-         console.warn(`Accès non autorisé pour le rôle ${userRole} à cette route.`);
-         // Pourrait rediriger vers une page d'erreur ou le dashboard par défaut de l'utilisateur
-         // Ici, on redirige vers login pour la simplicité, mais ce n'est pas idéal
-         return <Navigate to="/login" replace />; // Ou vers '/' ou une page '/unauthorized'
+        console.warn(`ProtectedRoute: Role mismatch. User: ${userRole}, Allowed: ${allowedRoles}. Redirecting to /`);
+        return <Navigate to="/" replace />;
     }
-
-    // Token existe et rôle autorisé (ou pas de rôle spécifique requis)
-    return <Outlet />; // Rend le composant enfant (la page protégée)
+    console.log(`ProtectedRoute: Access granted for role ${userRole} to routes needing ${allowedRoles || 'any role'}`);
+    return <Outlet />;
 };
 
+
+// --- Main App Component ---
 function App() {
+    const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
+
+    useEffect(() => {
+        const checkAuthStatus = () => {
+            const currentAuth = !!localStorage.getItem('authToken');
+            // Mettre à jour seulement si l'état change réellement
+            setIsAuthenticated(prev => prev === currentAuth ? prev : currentAuth);
+        };
+        window.addEventListener('storage', checkAuthStatus);
+        window.addEventListener('focus', checkAuthStatus);
+        checkAuthStatus();
+        return () => {
+            window.removeEventListener('storage', checkAuthStatus);
+            window.removeEventListener('focus', checkAuthStatus);
+        };
+    }, []); // Tableau vide OK ici
+
     return (
         <Router>
-            <Navbar /> {/* Affiche la Navbar sur toutes les pages */}
-            <div className="main-content"> {/* Pour le style si besoin */}
-                <Routes>
-                    {/* Routes Publiques */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    {/* <Route path="/" element={<HomePage />} /> */} {/* Page d'accueil */}
+            <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-grow">
+                    <Routes>
+                        {/* --- Public Routes --- */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
 
-                    {/* Routes Protégées pour Client */}
-                    <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
-                        <Route path="/client/dashboard" element={<ClientDashboard />} />
-                        {/* Ajoutez d'autres routes client ici */}
-                        {/* <Route path="/client/reservations" element={<ClientReservations />} /> */}
-                    </Route>
+                        {/* --- Root Route --- */}
+                        <Route
+                            path="/"
+                            element={isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />}
+                        />
 
-                    {/* Routes Protégées pour Prestataire (Exemple) */}
-                    {/* <Route element={<ProtectedRoute allowedRoles={['PRESTATAIRE']} />}>
-                        <Route path="/prestataire/dashboard" element={<PrestataireDashboard />} />
-                        <Route path="/prestataire/services" element={<PrestataireServices />} />
-                    </Route> */}
+                        {/* --- Protected Routes --- */}
+                        {/* CLIENT */}
+                        <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
+                            <Route path="/client/dashboard" element={<ClientDashboard />} />
+                            {/* Autres routes CLIENT */}
+                        </Route>
 
-                    {/* Routes Protégées pour Admin (Exemple) */}
-                    {/* <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    </Route> */}
+                        {/* PRESTATAIRE */}
+                        <Route element={<ProtectedRoute allowedRoles={['PRESTATAIRE']} />}>
+                            {/* *** DÉCOMMENTER LA ROUTE *** */}
+                            <Route path="/prestataire/dashboard" element={<PrestataireDashboard />} />
+                            {/* TODO: Ajoutez ici les autres routes spécifiques au prestataire */}
+                            {/* <Route path="/prestataire/services" element={<ManageServicesPage />} /> */}
+                        </Route>
 
-                    {/* Route par défaut ou page 404 */}
-                    <Route path="*" element={<Navigate to="/" replace />} /> {/* Ou une page 404 */}
-                </Routes>
+                        {/* ADMIN */}
+                        {/* <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}> */}
+                            {/* <Route path="/admin/dashboard" element={<AdminDashboard />} /> */}
+                            {/* Autres routes ADMIN */}
+                        {/* </Route> */}
+
+                        {/* --- Fallback Route --- */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </main>
+                <Footer />
             </div>
-            <Footer /> {/* Affiche le Footer sur toutes les pages */}
         </Router>
     );
 }

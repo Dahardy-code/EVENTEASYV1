@@ -1,32 +1,35 @@
 package com.eventeasyv1.config;
 
+import com.eventeasyv1.config.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Autowired
     private JwtFilter jwtFilter;
-
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -41,37 +44,53 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Désactiver CSRF pour les API stateless
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Activer CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Autoriser l'accès aux endpoints d'authentification
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Autoriser Swagger si utilisé
-                        // TODO: Configurer les autorisations pour les autres rôles ici
-                        .requestMatchers("/api/clients/**").authenticated() // Exiger l'authentification pour les API client
-                        // .requestMatchers("/api/prestataires/**").hasAuthority("PRESTATAIRE") // Exemple autorisation par rôle
-                        // .requestMatchers("/api/admin/**").hasAuthority("ADMIN") // Exemple
-                        .anyRequest().authenticated() // Toutes les autres requêtes nécessitent une authentification
+                        // ---- Public ----
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/register/client").permitAll()
+                        .requestMatchers("/api/auth/register/prestataire").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/offers").permitAll() // Endpoint public hypothétique
+                        .requestMatchers(HttpMethod.GET, "/api/events").permitAll()  // Endpoint public hypothétique
+                        .requestMatchers(HttpMethod.GET, "/api/services").permitAll() // Lister les services publiquement
+                        .requestMatchers(HttpMethod.GET, "/api/services/{id}").permitAll() // Voir détail service publiquement
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // ---- Protected ----
+                        .requestMatchers("/api/clients/me/**").hasRole("CLIENT") // Client ne peut accéder qu'à ses propres infos/actions
+                        .requestMatchers("/api/prestataires/me/**").hasRole("PRESTATAIRE") // Prestataire ne peut accéder qu'à ses propres infos/actions
+                        .requestMatchers("/api/reservations").hasRole("CLIENT") // Seul un client peut créer une réservation
+                        // Ajoutez d'autres règles... exemple:
+                        // .requestMatchers("/api/avis").hasRole("CLIENT") // Poster un avis
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/statistiques/admin").hasRole("ADMIN")
+                        // ---- Fallback ----
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Utiliser des sessions stateless (JWT)
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class); // Ajouter notre filtre JWT
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Configuration CORS (Très important pour le développement frontend)
     @Bean
-    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Remplacez "*" par l'URL de votre frontend en production
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://127.0.0.1:5173")); // Autoriser l'origine de Vite dev server
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-Requested-With", "Accept", "Origin"));
-        configuration.setAllowCredentials(true); // Important pour les cookies/auth headers
-        configuration.setMaxAge(3600L); // Durée de pré-vérification (preflight)
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173", // Adaptez à votre port Vite
+                "http://127.0.0.1:5173",
+                "http://localhost:3000", // Ancien port possible
+                "http://127.0.0.1:3000"
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        configuration.setAllowedHeaders(List.of("*")); // Simplifié pour le dev
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Appliquer cette config à toutes les routes
+        source.registerCorsConfiguration("/api/**", configuration); // Appliquer à /api/**
         return source;
     }
 }

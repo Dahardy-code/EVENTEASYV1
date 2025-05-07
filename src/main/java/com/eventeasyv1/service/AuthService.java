@@ -1,19 +1,28 @@
 package com.eventeasyv1.service;
 
 import com.eventeasyv1.dao.ClientRepository;
+import com.eventeasyv1.dao.PrestataireRepository;
 import com.eventeasyv1.dao.UtilisateurRepository;
 import com.eventeasyv1.dto.AuthResponse;
 import com.eventeasyv1.dto.LoginRequest;
 import com.eventeasyv1.dto.RegisterRequest;
 import com.eventeasyv1.entities.Client;
+import com.eventeasyv1.entities.Prestataire;
 import com.eventeasyv1.entities.Utilisateur;
+// Assurez-vous que ce chemin est correct
+import com.eventeasyv1.service.Impl.UserDetailsServiceImpl; // ou com.eventeasyv1.security...
 import com.eventeasyv1.utils.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,63 +32,182 @@ import java.util.Date;
 @Service
 public class AuthService {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
+    private final AuthenticationManager authenticationManager;
+    private final UtilisateurRepository utilisateurRepository;
+    private final ClientRepository clientRepository;
+    private final PrestataireRepository prestataireRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
 
     @Autowired
-    private UtilisateurRepository utilisateurRepository;
+    public AuthService(AuthenticationManager authenticationManager,
+                       UtilisateurRepository utilisateurRepository,
+                       ClientRepository clientRepository,
+                       PrestataireRepository prestataireRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil,
+                       UserDetailsService userDetailsService) {
+        this.authenticationManager = authenticationManager;
+        this.utilisateurRepository = utilisateurRepository;
+        this.clientRepository = clientRepository;
+        this.prestataireRepository = prestataireRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+    }
 
-    @Autowired
-    private ClientRepository clientRepository; // Injectez ClientRepository
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Transactional
+    @Transactional // Annotation importante pour la gestion des transactions
     public AuthResponse registerClient(RegisterRequest registerRequest) {
+        log.info("Début de l'inscription client pour l'email: {}", registerRequest.getEmail());
+
+        // 1. Vérifier si l'email existe déjà
         if (utilisateurRepository.existsByEmail(registerRequest.getEmail())) {
-            throw new RuntimeException("Erreur: Cet email est déjà utilisé!");
+            log.warn("Échec de l'inscription - Email déjà utilisé : {}", registerRequest.getEmail());
+            throw new RuntimeException("Erreur: Cet email est déjà utilisé!"); // Sera intercepté par le Controller -> 409
         }
 
+        // 2. Valider le mot de passe (non vide)
+        if (registerRequest.getPassword() == null || registerRequest.getPassword().trim().isEmpty()) {
+            log.error("Échec de l'inscription - Mot de passe vide pour {}", registerRequest.getEmail());
+            throw new IllegalArgumentException("Le mot de passe ne peut pas être vide."); // Pourrait être géré comme 400 Bad Request
+        }
+
+        // 3. Créer l'entité Client
         Client client = new Client();
         client.setNom(registerRequest.getNom());
         client.setPrenom(registerRequest.getPrenom());
         client.setEmail(registerRequest.getEmail());
-        client.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        // client.setRole("CLIENT"); // Normalement géré par @DiscriminatorValue, pas besoin de le setter explicitement
-        client.setDateInscription(new Date()); // Date d'inscription
+        client.setPassword(passwordEncoder.encode(registerRequest.getPassword())); // Encoder le mot de passe
+        client.setDateInscription(new Date()); // Définir la date d'inscription
 
-        Client savedClient = clientRepository.save(client);
+        // 4. Sauvegarder l'entité (JPA gère l'insertion dans utilisateur et client grâce à JOINED)
+        log.debug("Sauvegarde du nouveau client pour l'email: {}", registerRequest.getEmail());
+        Client savedClient;
+        try {
+            savedClient = clientRepository.save(client);
+        } catch (Exception e) {
+            log.error("Erreur lors de la sauvegarde du client pour {}: {}", registerRequest.getEmail(), e.getMessage(), e);
+            // Remonter une exception plus générique ou spécifique à la persistance
+            throw new RuntimeException("Erreur lors de la sauvegarde du client.", e);
+        }
+        log.info("Client enregistré avec succès: ID={}, Email={}", savedClient.getId(), savedClient.getEmail());
 
-        // Authentifier l'utilisateur après l'inscription pour générer le token
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(registerRequest.getEmail(), registerRequest.getPassword())
-        );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        // 5. Générer le token JWT pour le nouvel utilisateur
+        UserDetails userDetails;
+        try {
+            userDetails = userDetailsService.loadUserByUsername(savedClient.getEmail());
+        } catch (UsernameNotFoundException e) {
+            // Ceci ne devrait pas arriver juste après une sauvegarde réussie, mais sécurité
+            log.error("Erreur critique : Utilisateur {} sauvegardé mais non trouvé par UserDetailsService", savedClient.getEmail());
+            throw new RuntimeException("Erreur lors de la récupération des détails utilisateur après inscription.", e);
+        }
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String jwt = jwtUtil.generateToken(userDetails);
+        log.info("Token JWT généré pour le nouveau client: {}", savedClient.getEmail());
 
+        // 6. Retourner la réponse
         return new AuthResponse(jwt, savedClient.getEmail(), "CLIENT", savedClient.getId());
     }
 
-    public AuthResponse loginUser(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
-        );
+    // --- Méthode registerPrestataire (similaire mais utilise prestataireRepository) ---
+    @Transactional
+    public AuthResponse registerPrestataire(RegisterRequest registerRequest) {
+        log.info("Début de l'inscription prestataire pour l'email: {}", registerRequest.getEmail());
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        if (utilisateurRepository.existsByEmail(registerRequest.getEmail())) {
+            log.warn("Échec de l'inscription - Email déjà utilisé : {}", registerRequest.getEmail());
+            throw new RuntimeException("Erreur: Cet email est déjà utilisé!");
+        }
+
+        if (registerRequest.getPassword() == null || registerRequest.getPassword().trim().isEmpty()) {
+            log.error("Échec de l'inscription - Mot de passe vide pour {}", registerRequest.getEmail());
+            throw new IllegalArgumentException("Le mot de passe ne peut pas être vide.");
+        }
+
+        Prestataire prestataire = new Prestataire();
+        prestataire.setNom(registerRequest.getNom());
+        prestataire.setPrenom(registerRequest.getPrenom());
+        prestataire.setEmail(registerRequest.getEmail());
+        prestataire.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        // Champs spécifiques Prestataire
+        prestataire.setNomEntreprise(registerRequest.getNomEntreprise());
+        prestataire.setCategorieService(registerRequest.getCategorieService());
+        prestataire.setAdresse(registerRequest.getAdresse());
+        prestataire.setNumeroTel(registerRequest.getNumeroTel());
+
+        log.debug("Sauvegarde du nouveau prestataire pour l'email: {}", registerRequest.getEmail());
+        Prestataire savedPrestataire;
+        try {
+            savedPrestataire = prestataireRepository.save(prestataire); // Utilise le bon repository
+        } catch (Exception e) {
+            log.error("Erreur lors de la sauvegarde du prestataire pour {}: {}", registerRequest.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Erreur lors de la sauvegarde du prestataire.", e);
+        }
+        log.info("Prestataire enregistré avec succès: ID={}, Email={}", savedPrestataire.getId(), savedPrestataire.getEmail());
+
+        // Générer le token
+        UserDetails userDetails;
+        try {
+            userDetails = userDetailsService.loadUserByUsername(savedPrestataire.getEmail());
+        } catch (UsernameNotFoundException e) {
+            log.error("Erreur critique : Prestataire {} sauvegardé mais non trouvé par UserDetailsService", savedPrestataire.getEmail());
+            throw new RuntimeException("Erreur lors de la récupération des détails utilisateur après inscription.", e);
+        }
         String jwt = jwtUtil.generateToken(userDetails);
+        log.info("Token JWT généré pour le nouveau prestataire: {}", savedPrestataire.getEmail());
 
-        // Récupérer l'utilisateur pour obtenir son rôle et ID
-        Utilisateur utilisateur = utilisateurRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé après authentification"));
+        return new AuthResponse(jwt, savedPrestataire.getEmail(), "PRESTATAIRE", savedPrestataire.getId());
+    }
 
+    // --- Méthode loginUser (identique à la version précédente) ---
+    public AuthResponse loginUser(LoginRequest loginRequest) {
+        log.info("Tentative de connexion pour l'utilisateur: {}", loginRequest.getEmail());
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+            );
 
-        return new AuthResponse(jwt, utilisateur.getEmail(), utilisateur.getRole(), utilisateur.getId());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String jwt = jwtUtil.generateToken(userDetails);
+            log.info("Connexion réussie et token JWT généré pour: {}", userDetails.getUsername());
+
+            Utilisateur utilisateur = utilisateurRepository.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> {
+                        log.error("CRITICAL ERROR: Authenticated user {} not found in DB during login response build!", userDetails.getUsername());
+                        return new UsernameNotFoundException("Utilisateur authentifié mais introuvable: " + userDetails.getUsername());
+                    });
+
+            Long userId = utilisateur.getId();
+            String role = determineRole(utilisateur);
+
+            log.info("Réponse de connexion préparée pour User ID={}, Role={}", userId, role);
+            return new AuthResponse(jwt, userDetails.getUsername(), role, userId);
+
+        } catch (BadCredentialsException e) {
+            log.warn("Échec d'authentification pour {}: {}", loginRequest.getEmail(), e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Erreur système lors de la tentative de connexion pour {}: {}", loginRequest.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Erreur système lors de l'authentification.", e);
+        }
+    }
+
+    // --- Méthode determineRole (identique à la version précédente) ---
+    private String determineRole(Utilisateur utilisateur) {
+        if (utilisateur instanceof Client) {
+            return "CLIENT";
+        } else if (utilisateur instanceof Prestataire) {
+            return "PRESTATAIRE";
+        }
+        // else if (utilisateur instanceof Administrateur) { return "ADMIN"; }
+        else {
+            log.warn("Impossible de déterminer le rôle pour l'utilisateur ID {}. Type: {}",
+                    utilisateur.getId(), utilisateur.getClass().getName());
+            return "UNKNOWN";
+        }
     }
 }
