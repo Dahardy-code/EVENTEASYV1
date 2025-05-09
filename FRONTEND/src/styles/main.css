@@ -1,3 +1,134 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom CSS rules */
+
+:root {
+  --color-primary-dark: #333; /* Dark blue */
+  --color-primary-light: #666; /* Light blue */
+  --color-primary: #999; /* Default blue */
+  --color-secondary-dark: #444; /* Dark gray */
+  --color-secondary-light: #888; /* Light gray */
+  --color-secondary: #ccc; /* Default gray */
+  --color-tertiary-dark: #666; /* Dark orange */
+  --color-tertiary-light: #999; /* Light orange */
+  --color-tertiary: #ccc; /* Default orange */
+}
+
+body {
+  background-color: var(--color-tertiary);
+  color: var(--color-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+h1 {
+  font-size: 3.25rem;
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: 2.25rem;
+  line-height: 1.5;
+}
+
+h3 {
+  font-size: 1.75rem;
+  line-height: 1.75;
+}
+
+h4 {
+  font-size: 1.5rem;
+  line-height: 1.5;
+}
+
+h5 {
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+h6 {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+button {
+  background-color: var(--color-primary);
+  color: var(--color-secondary);
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+button:active {
+  background-color: var(--color-primary-light);
+}
+button {
+  background-color: var(--color-tertiary);
+}
+
+.text-darkGreen {
+    color: #006400; /* Dark Green color */
+  }
+.text-lightGreen {
+    color: #90EE90; /* Light Green color */
+  }
+.text-darkBlue {
+    color: #00008B; /* Dark Blue color */
+  }
+.text-lightBlue {
+    color: #ADD8E6; /* Light Blue color */
+  }
+.text-darkRed {
+    color: #8B0000; /* Dark Red color */
+  }
+.text-lightRed {
+    color: #FF6347; /* Light Red color */
+  }
+.text-darkOrange {
+    color: #FF8C00; /* Dark Orange color */
+  }
+.text-lightOrange {
+    color: #FFA07A; /* Light Orange color */
+  }
+.text-darkPurple {
+    color: #800080; /* Dark Purple color */
+  }
+.text-lightPurple {
+    color: #E6E6FA; /* Light Purple color */
+  }
+.text-darkPink {
+    color: #FF1493; /* Dark Pink color */
+  }
+.text-lightPink {
+    color: #FFB6C1; /* Light Pink color */
+  }
+.text-darkYellow {
+    color: #FFD700; /* Dark Yellow color */
+  }  
+  /* Assurez-vous que cette classe est appliquée à la navbar */
+.navbar {
+    background: linear-gradient(to right, #3E2723, #3E1C1A); /* Gradient marron foncé */
+  }
+  

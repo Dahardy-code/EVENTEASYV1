@@ -1,0 +1,53 @@
+package com.eventeasyv1.controller;
+
+
+import com.eventeasyv1.dto.StatistiqueDto;
+
+import com.eventeasyv1.service.StatistiqueService; // Créez ce service
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.Map; // Pour un retour simple
+
+@RestController
+@RequestMapping("/api/statistiques")
+public class StatistiqueController {
+
+    @Autowired(required = false)
+    private StatistiqueService statistiqueService;
+
+    // Endpoint pour les stats Admin (déjà un peu esquissé)
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getAdminDashboardStats() {
+        if (statistiqueService == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service stats non implémenté.");
+        }
+        try {
+            // TODO: Implémenter la récupération des stats agrégées dans StatistiqueService
+            Map<String, Object> stats = statistiqueService.getAdminStats(); // Exemple
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur calcul stats admin.", e);
+        }
+    }
+
+    // Endpoint pour les stats Prestataire (peut-être ?)
+    @GetMapping("/prestataire/me")
+    @PreAuthorize("hasRole('PRESTATAIRE')")
+    public ResponseEntity<Map<String, Object>> getMyPrestataireStats() {
+        if (statistiqueService == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service stats non implémenté.");
+        }
+        try {
+            // TODO: Implémenter la récupération des stats pour le prestataire connecté
+            Map<String, Object> stats = statistiqueService.getMyPrestataireStats(); // Exemple
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur calcul stats prestataire.", e);
+        }
+    }
+}

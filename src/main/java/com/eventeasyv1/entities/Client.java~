@@ -1,0 +1,102 @@
+package com.eventeasyv1.entities;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+import java.util.ArrayList; // Import pour initialiser la liste
+import java.util.Date;
+import java.util.List;
+
+// --- Imports des entités liées ---
+import com.eventeasyv1.entities.Reservation;
+// Ajoutez ces imports si/quand vous décommentez les relations correspondantes :
+// import com.eventeasyv1.entities.Avis;
+// import com.eventeasyv1.entities.Invitation;
+// import com.eventeasyv1.entities.Evenement;
+
+/**
+ * Entité représentant un Client, qui est un type spécifique d'Utilisateur.
+ * Utilise la stratégie d'héritage JOINED avec la table 'client'.
+ */
+@Entity
+@Table(name = "client") // Pointe vers la table spécifique 'client'
+@PrimaryKeyJoinColumn(name = "id") // Lie la clé primaire 'id' à celle de la table 'utilisateur'
+@Data
+// callSuper = true est nécessaire pour inclure les champs de Utilisateur
+// Exclude les collections pour éviter les problèmes (boucles infinies, performance) lors des appels à equals/hashCode/toString
+@EqualsAndHashCode(callSuper = true, exclude = {"reservations"}) // *** CORRIGÉ: Exclut uniquement 'reservations' pour l'instant ***
+// TODO: Ajoutez "avis", "invitations", "evenements" à exclude lorsque vous décommenterez ces relations
+@NoArgsConstructor
+@AllArgsConstructor
+public class Client extends Utilisateur {
+
+    // L'ID est hérité de Utilisateur et la liaison est gérée par @PrimaryKeyJoinColumn
+
+    /**
+     * Date d'inscription du client.
+     */
+    @Temporal(TemporalType.DATE) // Correspond au type DATE de la base de données
+    @Column(name = "date_inscription") // Assure le mapping correct avec la colonne SQL
+    private Date dateInscription;
+
+    // --- Relations ---
+
+    /**
+     * Liste des réservations effectuées par ce client.
+     * - mappedBy = "client": Indique que la gestion de la clé étrangère se trouve
+     *   dans le champ 'client' de l'entité Reservation.
+     * - cascade = CascadeType.ALL: Les opérations (persist, merge, remove...) sur Client
+     *   seront propagées aux Réservations associées. À utiliser avec prudence pour REMOVE.
+     * - fetch = FetchType.LAZY: Les réservations ne sont chargées que lorsqu'on y accède explicitement.
+     * - orphanRemoval = true: Si une réservation est retirée de cette liste (client.getReservations().remove(res)),
+     *   elle sera supprimée de la base de données.
+     */
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Reservation> reservations = new ArrayList<>(); // Initialisation pour éviter NullPointerException
+
+
+    /* --- Relations commentées (à décommenter et implémenter si nécessaire) ---
+
+    // Un Client peut laisser plusieurs Avis
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Avis> avis = new ArrayList<>();
+
+    // Un Client peut envoyer plusieurs Invitations
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Invitation> invitations = new ArrayList<>();
+
+    // Un Client peut créer plusieurs Evenements
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Evenement> evenements = new ArrayList<>();
+
+    */
+
+
+    /**
+     * Représentation textuelle de l'objet Client, incluant les informations de base
+     * et le nombre de réservations (évite l'affichage potentiellement lourd des collections).
+     *
+     * @return Une chaîne de caractères décrivant le Client.
+     */
+    @Override
+    public String toString() {
+        // Construit une chaîne de caractères lisible pour le débogage
+        // Appelle super.toString() pour inclure les champs hérités d'Utilisateur
+        // Affiche le compte des réservations plutôt que la liste complète pour éviter les problèmes de performance/récursion
+        return "Client{" +
+                "id=" + getId() + // Méthode héritée de Utilisateur (via Lombok @Data)
+                ", nom='" + getNom() + '\'' + // Méthode héritée
+                ", prenom='" + getPrenom() + '\'' + // Méthode héritée
+                ", email='" + getEmail() + '\'' + // Méthode héritée
+                ", dateInscription=" + dateInscription +
+                ", reservationsCount=" + (reservations != null ? reservations.size() : 0) +
+                // Ajoutez ici le compte pour les autres listes si vous les décommentez
+                // ", avisCount=" + (avis != null ? avis.size() : 0) +
+                // ", invitationsCount=" + (invitations != null ? invitations.size() : 0) +
+                // ", evenementsCount=" + (evenements != null ? evenements.size() : 0) +
+                '}';
+    }
+}

@@ -1,0 +1,38 @@
+package com.eventeasyv1.service;
+
+import com.eventeasyv1.dao.DisponibiliteRepository;
+import com.eventeasyv1.dto.input.DisponibiliteCreateDto;
+import com.eventeasyv1.entities.Disponibilite;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class DisponibiliteService {
+
+    private final DisponibiliteRepository disponibiliteRepository;
+
+    @Transactional
+    public Disponibilite createDisponibilite(DisponibiliteCreateDto dto) {
+        Disponibilite disponibilite = new Disponibilite();
+        disponibilite.setDateDispo(dto.getDebut().toLocalDate());
+        disponibilite.setHeureDebut(dto.getDebut().toLocalTime());
+        disponibilite.setHeureFin(dto.getFin().toLocalTime());
+        // Assuming there's a method to find Prestataire by ID
+        disponibilite.setPrestataire(findPrestataireById(dto.getPrestataireId()));
+        return disponibiliteRepository.save(disponibilite);
+    }
+
+    public List<Disponibilite> findAll() {
+        return disponibiliteRepository.findAll();
+    }
+
+    // Add method to find Prestataire by ID (not shown in the snippet)
+    private Prestataire findPrestataireById(Long id) {
+        // Implementation to find and return a Prestataire by its ID
+        return new Prestataire(); // Placeholder
+    }
+}

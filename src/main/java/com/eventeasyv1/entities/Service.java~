@@ -1,0 +1,48 @@
+package com.eventeasyv1.entities;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.ToString; // Pour @ToString.Exclude
+
+import java.math.BigDecimal; // Préférable pour les montants monétaires
+
+/**
+ * Entité représentant un service offert par un prestataire.
+ */
+@Entity
+@Table(name = "service") // Correspond au nom de votre table
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Service {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "titre", length = 150, nullable = false)
+    private String titre;
+
+    @Lob // Pour les champs TEXT plus longs
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "prix", precision = 10, scale = 2) // precision et scale pour DECIMAL
+    private BigDecimal prix;
+
+    @Column(name = "categorie", length = 100)
+    private String categorie;
+
+    // --- Relation vers Prestataire ---
+    // Plusieurs services peuvent appartenir à un seul prestataire.
+    @ManyToOne(fetch = FetchType.LAZY) // LAZY est une bonne pratique
+    @JoinColumn(name = "prestataire_id", nullable = false) // La colonne de clé étrangère dans la table 'service'
+    @ToString.Exclude // Important si Prestataire a une List<Service> pour éviter les boucles
+    private Prestataire prestataire;
+
+    // Lombok @Data gère les getters, setters, toString, equals, hashCode.
+    // @ToString.Exclude est utilisé pour éviter les problèmes de récursion
+    // dans le toString() si l'entité Prestataire a une liste de Services.
+}

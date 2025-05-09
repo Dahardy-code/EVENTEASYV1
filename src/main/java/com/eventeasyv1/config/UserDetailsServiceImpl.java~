@@ -1,0 +1,109 @@
+package com.eventeasyv1.service.Impl; // Preferred package
+
+import com.eventeasyv1.dao.UtilisateurRepository;
+import com.eventeasyv1.entities.Client; // <-- Importer Client
+import com.eventeasyv1.entities.Prestataire; // <-- Importer Prestataire
+import com.eventeasyv1.entities.Utilisateur;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection; // <-- Importer Collection
+import java.util.Collections;
+import java.util.List; // Peut être remplacé par Collection
+
+/**
+ * Service implementation for loading user-specific data for Spring Security.
+ * Uses email as the username.
+ */
+@Service("userDetailsService") // Nom du bean explicite
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserDetailsServiceImpl.class);
+
+    // Utiliser l'injection par constructeur (meilleure pratique)
+    private final UtilisateurRepository utilisateurRepository;
+
+    @Autowired
+    public UserDetailsServiceImpl(UtilisateurRepository utilisateurRepository) {
+        this.utilisateurRepository = utilisateurRepository;
+    }
+
+    /**
+     * Locates the user based on the email (username).
+     * Maps the found Utilisateur entity to Spring Security's UserDetails interface.
+     *
+     * @param email The email identifying the user whose data is required.
+     * @return UserDetails object containing user information for authentication/authorization.
+     * @throws UsernameNotFoundException if the user could not be found or the user type is unknown.
+     */
+    @Override
+    @Transactional(readOnly = true) // readOnly = true car on ne fait que lire
+    public UserDetails loadUserByUsername(@NonNull String email) throws UsernameNotFoundException {
+        log.debug("Attempting to load user by email: {}", email);
+
+        // Récupérer l'utilisateur par email
+        Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.warn("User not found with email: {}", email);
+                    return new UsernameNotFoundException("Utilisateur non trouvé avec l'email: " + email);
+                });
+
+        // *** CORRECTION ICI ***
+        // Déterminer les autorités en fonction du type réel de l'utilisateur
+        Collection<? extends GrantedAuthority> authorities = determineAuthorities(utilisateur);
+
+        if (authorities.isEmpty()) {
+            log.error("User {} found but has an unknown role type!", email);
+            // On pourrait choisir de lancer une exception ou d'assigner un rôle par défaut
+            throw new UsernameNotFoundException("Type de rôle inconnu pour l'utilisateur: " + email);
+        }
+
+        log.info("User '{}' loaded successfully with authorities: {}", email, authorities);
+
+        // Retourner l'objet UserDetails standard de Spring Security
+        return new User( // Ou utiliser votre propre UserDetailsImpl si vous en avez une
+                utilisateur.getEmail(),
+                utilisateur.getPassword(), // Utilise le getter généré par Lombok
+                authorities // Les autorités déterminées ci-dessus
+        );
+    }
+
+    /**
+     * Détermine la collection de GrantedAuthority pour Spring Security
+     * en fonction du type réel de l'objet Utilisateur.
+     * @param utilisateur L'objet utilisateur (peut être Client, Prestataire, etc.)
+     * @return Une collection contenant les autorités (ex: "ROLE_CLIENT").
+     *         Retourne une collection vide si le type n'est pas reconnu.
+     */
+    private Collection<? extends GrantedAuthority> determineAuthorities(Utilisateur utilisateur) {
+        String roleString;
+        if (utilisateur instanceof Client) {
+            roleString = "CLIENT";
+        } else if (utilisateur instanceof Prestataire) {
+            roleString = "PRESTATAIRE";
+        }
+        // Ajoutez d'autres types si nécessaire (ex: Admin)
+        // else if (utilisateur instanceof Admin) {
+        //     roleString = "ADMIN";
+        // }
+        else {
+            // Cas où l'utilisateur n'est d'aucun type connu
+            log.warn("Utilisateur ID {} a un type non reconnu: {}", utilisateur.getId(), utilisateur.getClass().getName());
+            return Collections.emptyList(); // Retourne une liste vide, géré dans loadUserByUsername
+        }
+
+        // Crée une liste immuable contenant une seule autorité.
+        // Spring Security attend généralement des rôles préfixés par "ROLE_".
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + roleString));
+    }
+}

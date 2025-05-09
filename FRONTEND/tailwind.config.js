@@ -12,7 +12,7 @@ module.exports = {
         },
         accent: {
           DEFAULT: '#fdf6e3',     // Beige clair
-          dark: '#f5f5dc',        // Beige plus profond
+          dark: '#f5f5dc',        // Beige plus foncé
         },
       },
     },

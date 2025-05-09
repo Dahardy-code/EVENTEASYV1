@@ -1,0 +1,22 @@
+package com.eventeasyv1.service;
+
+import com.eventeasyv1.dto.ServiceDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.Optional;
+
+public interface ServiceService {
+
+    /**
+     * Récupère tous les services publics, avec pagination et filtres optionnels.
+     */
+    Page<ServiceDto> getAllPublicServices(Pageable pageable, String categorieFiltre, String searchTerm);
+
+    /**
+     * Récupère un service public par son ID.
+     */
+    Optional<ServiceDto> getPublicServiceById(Long id);
+
+    Page<ServiceDto> findAvailableServices(String query, String categorie, Pageable pageable);
+}

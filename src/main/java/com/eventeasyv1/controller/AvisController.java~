@@ -1,0 +1,73 @@
+package com.eventeasyv1.controller;
+
+import com.eventeasyv1.dto.AvisDto; // Créez ce DTO
+import com.eventeasyv1.dto.input.AvisCreateDto; // Créez ce DTO
+import com.eventeasyv1.service.AvisService; // Créez ce Service
+import jakarta.validation.Valid;
+import lombok.Getter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Collections;
+import java.util.List;
+
+@Getter
+@RestController
+@RequestMapping("/api") // Base path
+public class AvisController {
+
+    @Autowired
+    private AvisService avisService; // Injectez le service
+
+    // Endpoint public pour lister les avis d'un service
+    @GetMapping("/services/{serviceId}/avis")
+    public ResponseEntity<List<AvisDto>> getAvisForService(@PathVariable Long serviceId) {
+        try {
+            // TODO: Implémenter avisService.getAvisByServiceId(serviceId);
+            List<AvisDto> avisList = Collections.emptyList(); // Placeholder
+            return ResponseEntity.ok(avisList);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur chargement avis.", e);
+        }
+    }
+
+    // Endpoint pour un client authentifié pour poster un avis sur un service
+    @PostMapping("/services/{serviceId}/avis")
+    @PreAuthorize("hasRole('CLIENT')") // Seuls les clients peuvent poster
+    public ResponseEntity<AvisDto> laisserAvis(@PathVariable Long serviceId,
+                                               @Valid @RequestBody AvisCreateDto avisDto) {
+        try {
+            // TODO: Implémenter avisService.createAvis(serviceId, avisDto);
+            // Cette méthode devrait vérifier si le client a réservé/utilisé le service
+            // et récupérer l'ID du client connecté depuis SecurityContextHolder
+            AvisDto createdAvis = new AvisDto(); // Placeholder
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdAvis);
+        } catch (Exception e) { // Adaptez les exceptions (ex: ServiceNotFound, NotAllowedToReview)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible de laisser l'avis.", e);
+        }
+    }
+
+    // Endpoint pour un prestataire pour voir les avis sur ses services
+    @GetMapping("/prestataires/me/avis")
+    @PreAuthorize("hasRole('PRESTATAIRE')")
+    public ResponseEntity<List<AvisDto>> getMyServicesAvis() {
+        try {
+            // TODO: Implémenter avisService.getAvisForMyServices();
+            // Récupère l'ID prestataire depuis SecurityContextHolder
+            List<AvisDto> avisList = Collections.emptyList(); // Placeholder
+            return ResponseEntity.ok(avisList);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur chargement avis.", e);
+        }
+    }
+
+    public void setAvisService(AvisService avisService) {
+        this.avisService = avisService;
+    }
+
+    // Ajoutez d'autres endpoints si nécessaire (modifier/supprimer un avis - admin/propriétaire)
+}

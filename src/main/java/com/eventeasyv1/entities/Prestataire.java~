@@ -1,56 +1,45 @@
 package com.eventeasyv1.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+// Importez List si vous décommentez les relations
+// import java.util.List;
 
 @Entity
-public class Prestataire {
+@Table(name = "prestataire") // *** Pointe vers la table spécifique 'prestataire' ***
+@PrimaryKeyJoinColumn(name = "id") // *** Indique que 'id' est PK et FK vers utilisateur.id ***
+// On ne met PAS @DiscriminatorValue avec JOINED
+@Data
+@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor
+@AllArgsConstructor
+public class Prestataire extends Utilisateur {
 
-    @Id
-    private Long id;
-    private String nom;
-    private String email;
-    private String téléphone;
+    // L'ID est hérité et géré par @PrimaryKeyJoinColumn
+
+    // Mappages explicites des colonnes spécifiques
+    @Column(name = "nom_entreprise", nullable = true)
+    private String nomEntreprise;
+
+    @Column(name = "categorie_service", nullable = true)
+    private String categorieService;
+
+    @Column(name = "adresse", nullable = true)
     private String adresse;
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
+    @Column(name = "numero_tel", nullable = true)
+    private String numeroTel;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    // --- Relations ---
+    // Ces relations utilisent 'prestataire_id' qui est défini dans les tables
+    // service et disponibilite, donc le mappedBy devrait fonctionner.
+    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // private List<Service> services;
 
-    public String getNom() {
-        return nom;
-    }
-
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getTéléphone() {
-        return téléphone;
-    }
-
-    public void setTéléphone(String téléphone) {
-        this.téléphone = téléphone;
-    }
-
-    public String getAdresse() {
-        return adresse;
-    }
-
-    public void setAdresse(String adresse) {
-        this.adresse = adresse;
-    }
+    // @OneToMany(mappedBy = "prestataire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // private List<Disponibilite> disponibilites;
 }
