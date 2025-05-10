@@ -5,33 +5,43 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 // --- Page Imports ---
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import HomePage from './pages/HomePage'; // <-- Votre HomePage
 import ClientDashboard from './pages/client/Dashboard';
-import HomePage from './pages/HomePage';
-// *** DÉCOMMENTER L'IMPORT ***
 import PrestataireDashboard from './pages/prestataire/Dashboard';
-// import AdminDashboard from './pages/admin/Dashboard'; // Décommentez quand prêt
+import ManagePrestataireServices from './pages/prestataire/Services';
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * The main application component that sets up the routes and navigation for the app.
+ * It includes:
+ * - A Navbar component for navigation.
+ * - Route definitions for Home, Login, Register, and Dashboard pages.
+ * - PrivateRoute components to protect dashboard routes based on user roles.
+ * - The PrestataireDashboard is accessible to users with the 'PRESTATAIRE' role.
+ * - The ClientDashboard is accessible to users with the 'CLIENT' role.
+ */
+
+/*******  ef815652-a6d9-467b-b3f3-9a0dafd1b92d  *******/import PrestataireMesEvenements from './pages/prestataire/MesEvenements';
+import GererDisponibilites from './pages/prestataire/GererDisponibilites';
+import VoirPrestataireStatistiques from './pages/prestataire/VoirStatistiques';
+// import AdminDashboard from './pages/admin/Dashboard';
 
 // --- Component Imports ---
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
-// --- Protected Route Component (Identique) ---
+// --- Protected Route Component ---
 const ProtectedRoute = ({ allowedRoles }) => {
     const token = localStorage.getItem('authToken');
     const userRole = localStorage.getItem('userRole');
 
     if (!token) {
-        console.log("ProtectedRoute: No token, redirecting to /login");
         return <Navigate to="/login" replace />;
     }
     if (allowedRoles && !allowedRoles.includes(userRole)) {
-        console.warn(`ProtectedRoute: Role mismatch. User: ${userRole}, Allowed: ${allowedRoles}. Redirecting to /`);
-        return <Navigate to="/" replace />;
+        return <Navigate to="/" replace />; // Redirige vers l'accueil si mauvais rôle
     }
-    console.log(`ProtectedRoute: Access granted for role ${userRole} to routes needing ${allowedRoles || 'any role'}`);
     return <Outlet />;
 };
-
 
 // --- Main App Component ---
 function App() {
@@ -40,7 +50,6 @@ function App() {
     useEffect(() => {
         const checkAuthStatus = () => {
             const currentAuth = !!localStorage.getItem('authToken');
-            // Mettre à jour seulement si l'état change réellement
             setIsAuthenticated(prev => prev === currentAuth ? prev : currentAuth);
         };
         window.addEventListener('storage', checkAuthStatus);
@@ -50,7 +59,7 @@ function App() {
             window.removeEventListener('storage', checkAuthStatus);
             window.removeEventListener('focus', checkAuthStatus);
         };
-    }, []); // Tableau vide OK ici
+    }, []);
 
     return (
         <Router>
@@ -58,38 +67,25 @@ function App() {
                 <Navbar />
                 <main className="flex-grow">
                     <Routes>
-                        {/* --- Public Routes --- */}
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
+                        <Route path="/" element={isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />} />
 
-                        {/* --- Root Route --- */}
-                        <Route
-                            path="/"
-                            element={isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />}
-                        />
-
-                        {/* --- Protected Routes --- */}
-                        {/* CLIENT */}
                         <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
                             <Route path="/client/dashboard" element={<ClientDashboard />} />
-                            {/* Autres routes CLIENT */}
                         </Route>
 
-                        {/* PRESTATAIRE */}
                         <Route element={<ProtectedRoute allowedRoles={['PRESTATAIRE']} />}>
-                            {/* *** DÉCOMMENTER LA ROUTE *** */}
                             <Route path="/prestataire/dashboard" element={<PrestataireDashboard />} />
-                            {/* TODO: Ajoutez ici les autres routes spécifiques au prestataire */}
-                            {/* <Route path="/prestataire/services" element={<ManageServicesPage />} /> */}
+                            <Route path="/prestataire/services" element={<ManagePrestataireServices />} />
+                            <Route path="/prestataire/mes-evenements" element={<PrestataireMesEvenements />} />
+                            <Route path="/prestataire/disponibilites" element={<GererDisponibilites />} />
+                            <Route path="/prestataire/statistiques" element={<VoirPrestataireStatistiques />} />
                         </Route>
 
-                        {/* ADMIN */}
-                        {/* <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}> */}
-                            {/* <Route path="/admin/dashboard" element={<AdminDashboard />} /> */}
-                            {/* Autres routes ADMIN */}
-                        {/* </Route> */}
-
-                        {/* --- Fallback Route --- */}
+                        {/* <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                        </Route> */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </main>
@@ -98,5 +94,4 @@ function App() {
         </Router>
     );
 }
-
 export default App;

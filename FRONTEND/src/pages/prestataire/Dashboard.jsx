@@ -184,7 +184,7 @@ const PrestataireDashboard = () => {
         >
           Se déconnecter
         </button>
-      </div>
+      </div>      
     </div>
   );
 };

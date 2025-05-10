@@ -54,6 +54,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/offers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                                // --- AUTORISER LES SERVICES PUBLIQUEMENT ---
+                                .requestMatchers(HttpMethod.GET, "/api/services").permitAll()       // Pour la liste des services
+                                .requestMatchers(HttpMethod.GET, "/api/services/{id}").permitAll()  // Pour le détail d'un service
+// -------------------------------------------
                         // ---- Protected ----
                         .requestMatchers("/api/clients/me").hasRole("CLIENT")
                         .requestMatchers("/api/prestataires/me/**").hasRole("PRESTATAIRE")
