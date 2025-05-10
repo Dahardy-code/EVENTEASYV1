@@ -1,0 +1,12 @@
+package com.eventeasyv1.dto;
+import lombok.Data;
+
+@Data
+public class AdminDto {
+    private Long id;
+    private String nom;
+    private String prenom;
+    private String email;
+    private String privileges;
+    private String role = "ADMIN";
+}
