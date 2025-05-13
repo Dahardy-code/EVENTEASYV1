@@ -29,7 +29,9 @@ public abstract class Utilisateur {
 
     @Column(name = "mot_de_passe") // Mapper explicitement le nom de colonne DB
     private String password; // Nom du champ Java peut rester 'password'
-
+    // --- CHAMP AJOUTÉ ---
+    @Column(name = "est_actif", nullable = false)
+    private boolean active = true; // Valeur par défaut à true lors de la création
     // La colonne 'role' n'est PAS mappée ici avec JOINED.
     // Le type (et donc le rôle implicite) est déterminé par la table jointe.
 }

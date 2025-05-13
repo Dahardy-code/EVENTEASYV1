@@ -11,5 +11,6 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
 
     // Si vous avez besoin de méthodes spécifiques pour Client, ajoutez-les ici.
     // Par exemple, pour retrouver un client par email (même si déjà dans UtilisateurRepository) :
-    // Optional<Client> findByEmail(String email);
+    Optional<Client> findByEmail(String email);
+
 }

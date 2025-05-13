@@ -11,4 +11,5 @@ public class ClientDto {
     private String email;
     private Date dateInscription;
     // N'incluez PAS le mot de passe
+    private String role;
 }

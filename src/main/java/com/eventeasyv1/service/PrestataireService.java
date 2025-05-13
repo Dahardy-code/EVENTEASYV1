@@ -1,16 +1,22 @@
 package com.eventeasyv1.service;
 
 import com.eventeasyv1.dao.PrestataireRepository; // Use PrestataireRepository
+import com.eventeasyv1.dao.ReservationRepository;
 import com.eventeasyv1.dto.PrestataireDto;      // Use PrestataireDto
+import com.eventeasyv1.dto.ReservationDto;
 import com.eventeasyv1.entities.Prestataire;    // Use Prestataire entity
-import com.eventeasyv1.entities.Utilisateur;    // May need Utilisateur if fetching from base repo
-import com.eventeasyv1.dao.UtilisateurRepository; // Optional: If fetching from base repository
+import com.eventeasyv1.entities.Reservation;
+import com.eventeasyv1.exception.ResourceNotFoundException;
+import com.eventeasyv1.service.Impl.ReservationServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Good practice for service methods reading data
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PrestataireService {
@@ -21,7 +27,11 @@ public class PrestataireService {
     // Optional: Inject UtilisateurRepository if needed for a more robust findByEmail approach
     // @Autowired
     // private UtilisateurRepository utilisateurRepository;
+    @Autowired
+    private ReservationRepository reservationRepository;
 
+    @Autowired
+    private ReservationServiceImpl reservationServiceMapper;// Pour réutiliser la méthode mapToDto
     /**
      * Retrieves the details of the currently authenticated Prestataire.
      *
@@ -29,7 +39,7 @@ public class PrestataireService {
      * @throws UsernameNotFoundException if the authenticated user is not found or is not a Prestataire.
      */
     @Transactional(readOnly = true) // Mark as transactional and read-only
-    public PrestataireDto getCurrentPrestataireDetails() {
+    public PrestataireDto getCurrentPrestataireDetails(String email) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new IllegalStateException("Aucun utilisateur authentifié trouvé.");
@@ -77,6 +87,16 @@ public class PrestataireService {
         dto.setNumeroTel(prestataire.getNumeroTel());
         // Add other fields if needed in the DTO
         return dto;
+    }
+    @Transactional(readOnly = true)
+    public List<ReservationDto> getMyServiceReservations(String prestataireEmail) {
+        Prestataire prestataire = prestataireRepository.findByEmail(prestataireEmail) // CORRECTION : Appeler via le repository
+                .orElseThrow(() -> new ResourceNotFoundException("Prestataire", "email", prestataireEmail));
+
+        List<Reservation> reservations = reservationRepository.findByServicePrestataireIdOrderByDateReservationDesc(prestataire.getId());
+        return reservations.stream()
+                .map(reservationServiceMapper::mapToDto) // Utilise le mapper de ReservationServiceImpl
+                .collect(Collectors.toList());
     }
 
     // --- Add other Prestataire-specific service methods ---

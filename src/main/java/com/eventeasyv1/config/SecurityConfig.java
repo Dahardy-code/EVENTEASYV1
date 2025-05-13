@@ -1,6 +1,6 @@
 package com.eventeasyv1.config;
 
-import com.eventeasyv1.config.JwtFilter; // Assurez-vous que le chemin est correct
+import com.eventeasyv1.config.JwtFilter; // Assurez-vous que JwtFilter est un @Component
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,11 +25,11 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity // Active la sécurité au niveau des méthodes (pour @PreAuthorize)
 public class SecurityConfig {
 
     @Autowired
-    private JwtFilter jwtFilter;
+    private JwtFilter jwtFilter; // S'assurer que JwtFilter est un bean @Component
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -44,32 +44,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Appliquer la configuration CORS définie ci-dessous
+                .csrf(AbstractHttpConfigurer::disable) // Désactiver CSRF pour les API REST stateless
                 .authorizeHttpRequests(auth -> auth
-                        // ---- Public ----
-                        .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/register/client").permitAll()
-                        .requestMatchers("/api/auth/register/prestataire").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/offers").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
+                        // ---- Endpoints Publics ----
+                        .requestMatchers("/api/auth/**").permitAll() // Login, Register Client, Register Prestataire
+                        .requestMatchers(HttpMethod.GET, "/api/services").permitAll()       // Liste publique des services
+                        .requestMatchers(HttpMethod.GET, "/api/services/**").permitAll()  // Détail public d'un service ET LES AVIS (GET /api/services/{id}/avis)
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Pour la documentation API Swagger/OpenAPI
+                        .requestMatchers(HttpMethod.GET, "/api/promos/active").permitAll() // Endpoint public pour les promos actives
+                        .requestMatchers(HttpMethod.GET, "/api/promos/validate/{codePromo}").permitAll() // Endpoint public pour valider un code
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                                // --- AUTORISER LES SERVICES PUBLIQUEMENT ---
-                                .requestMatchers(HttpMethod.GET, "/api/services").permitAll()       // Pour la liste des services
-                                .requestMatchers(HttpMethod.GET, "/api/services/{id}").permitAll()  // Pour le détail d'un service
-// -------------------------------------------
-                        // ---- Protected ----
-                        .requestMatchers("/api/clients/me").hasRole("CLIENT")
-                        .requestMatchers("/api/prestataires/me/**").hasRole("PRESTATAIRE")
-                        .requestMatchers("/api/statistiques/admin").hasRole("ADMIN")
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
                         // ---- Fallback ----
-                        .anyRequest().authenticated()
+                        // La sécurité plus granulaire pour les autres endpoints (comme POST /api/services/{id}/avis)
+                        // est gérée par @PreAuthorize dans les controllers grâce à @EnableMethodSecurity
+                        .anyRequest().authenticated() // Toutes les autres requêtes nécessitent une authentification
                 )
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Pas de session côté serveur (pour JWT)
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class); // Ajouter notre filtre JWT
 
         return http.build();
     }
@@ -77,21 +72,23 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        // IMPORTANT : VÉRIFIEZ LE PORT EXACT sur lequel tourne votre frontend Vite
+        // (Ex: 3000, 3001, 5173 - regardez les logs de `npm run dev`)
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:3000", // Port vu dans les screenshots précédents
-                "http://127.0.0.1:3000"
+                "http://localhost:3000",
+                "http://localhost:3000/",
+                "http://127.0.0.1:3000",
+                "http://localhost:3001",   // Si Vite utilise ce port
+                "http://127.0.0.1:3001",  // Si Vite utilise ce port
+                "http://localhost:5173"    // Autre port courant pour Vite/React
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
-        // Utiliser "*" en dev est acceptable, mais être spécifique en prod est mieux
         configuration.setAllowedHeaders(List.of("*"));
-        // configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", ...)); // Exemple Prod
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        // configuration.setMaxAge(3600L); // Optionnel
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/**", configuration); // Appliquer à tous les chemins
         return source;
     }
 }

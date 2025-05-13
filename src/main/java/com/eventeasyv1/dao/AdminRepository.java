@@ -8,5 +8,7 @@ import java.util.Optional;
 @Repository
 public interface AdminRepository extends JpaRepository<Administrateur, Long> {
     Optional<Administrateur> findByEmail(String email);
-    // Ajoutez d'autres méthodes spécifiques si nécessaire
+    // --- MÉTHODE AJOUTÉE ---
+    long countByActive(boolean active);
+    // --- FIN MÉTHODE AJOUTÉE ---
 }

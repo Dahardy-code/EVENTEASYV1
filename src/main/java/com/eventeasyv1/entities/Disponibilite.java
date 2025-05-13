@@ -1,37 +1,32 @@
 package com.eventeasyv1.entities;
+
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.ToString;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "disponibilite")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"prestataire"})
+@Table(name = "disponibilites")
 public class Disponibilite {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "date_dispo")
-    private LocalDate dateDispo;
+    @Column(nullable = false)
+    private LocalDateTime dateDebut; // <-- CE CHAMP DOIT EXISTER AVEC CE NOM
 
-    @Column(name = "heure_debut")
-    private LocalTime heureDebut;
-
-    @Column(name = "heure_fin")
-    private LocalTime heureFin;
+    @Column(nullable = false)
+    private LocalDateTime dateFin;   // <-- CE CHAMP DOIT EXISTER AVEC CE NOM
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "prestataire_id", nullable = false)
-    @ToString.Exclude
     private Prestataire prestataire;
 }

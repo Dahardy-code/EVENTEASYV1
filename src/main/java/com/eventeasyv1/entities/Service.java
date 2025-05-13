@@ -1,10 +1,6 @@
 package com.eventeasyv1.entities;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -15,6 +11,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
 @EqualsAndHashCode(exclude = {"prestataire", "reservations", "avis"}) // Éviter les boucles
 public class Service {
 
@@ -25,8 +22,8 @@ public class Service {
     @Column(name = "titre", length = 150)
     private String titre;
 
-    @Lob // Pour les champs TEXT longs
-    @Column(name = "description")
+     // Pour les champs TEXT longs
+    @Column(name = "description", length = 1000)
     private String description;
 
     @Column(name = "prix", precision = 10, scale = 2)

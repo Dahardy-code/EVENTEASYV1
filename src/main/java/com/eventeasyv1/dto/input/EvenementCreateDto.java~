@@ -1,4 +1,0 @@
-package com.eventeasyv1.dto.input;
-
-public class EvenementCreateDto {
-}

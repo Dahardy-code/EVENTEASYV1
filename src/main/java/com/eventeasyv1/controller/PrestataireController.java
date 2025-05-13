@@ -1,49 +1,55 @@
 package com.eventeasyv1.controller;
 
-import com.eventeasyv1.dto.PrestataireDto;        // Use PrestataireDto
-import com.eventeasyv1.service.PrestataireService; // Use PrestataireService
+import com.eventeasyv1.dto.PrestataireDto;
+import com.eventeasyv1.dto.ReservationDto;
+import com.eventeasyv1.service.PrestataireService;
+// import org.apache.tomcat.util.net.openssl.ciphers.Authentication; // MAUVAIS IMPORT - À SUPPRIMER
+import org.springframework.security.core.Authentication; // <-- BON IMPORT
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException; // For cleaner error responses
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/prestataires") // Base path for prestataire related endpoints
-// Consider CORS configuration in a central SecurityConfig class instead of per-controller
-// @CrossOrigin(origins = "*")
+@RequestMapping("/api/prestataires")
 public class PrestataireController {
 
     @Autowired
     private PrestataireService prestataireService;
 
-    /**
-     * Endpoint to get the information of the currently logged-in Prestataire.
-     * Accessed via GET /api/prestataires/me
-     *
-     * @return ResponseEntity containing PrestataireDto or an error status.
-     */
     @GetMapping("/me")
-    public ResponseEntity<PrestataireDto> getCurrentPrestataireInfo() {
+    @PreAuthorize("hasRole('PRESTATAIRE')") // Bonne pratique d'ajouter @PreAuthorize ici aussi
+    public ResponseEntity<PrestataireDto> getCurrentPrestataireInfo(Authentication authentication) { // Utiliser l'injection d'Authentication
         try {
-            // Logic to retrieve authenticated user is handled by the service via SecurityContextHolder
-            PrestataireDto prestataireInfo = prestataireService.getCurrentPrestataireDetails();
+            // Le service devrait prendre Authentication ou l'email en paramètre
+            // Si getCurrentPrestataireDetails() dans le service utilise SecurityContextHolder,
+            // l'argument Authentication n'est pas strictement nécessaire ici, mais c'est plus propre de le passer.
+            String email = authentication.getName(); // Récupérer l'email
+            PrestataireDto prestataireInfo = prestataireService.getCurrentPrestataireDetails(email); // Passer l'email
             return ResponseEntity.ok(prestataireInfo);
         } catch (UsernameNotFoundException e) {
-            // User associated with token not found or is not a prestataire
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
         } catch (IllegalStateException e) {
-            // No user authenticated
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage(), e);
         } catch (Exception e) {
-            // Catch unexpected errors
-            // Log the error server-side
             System.err.println("Unexpected error fetching prestataire info: " + e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne du serveur.", e);
         }
+    }
+
+    @GetMapping("/me/reservations")
+    @PreAuthorize("hasRole('PRESTATAIRE')")
+    public ResponseEntity<List<ReservationDto>> getMyServiceReservations(Authentication authentication) { // Le type est maintenant correct
+        String prestataireEmail = authentication.getName();
+        List<ReservationDto> reservations = prestataireService.getMyServiceReservations(prestataireEmail);
+        return ResponseEntity.ok(reservations);
     }
 
     // --- Add other Prestataire-specific endpoints here ---

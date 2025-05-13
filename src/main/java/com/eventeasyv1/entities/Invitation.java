@@ -1,42 +1,50 @@
 package com.eventeasyv1.entities;
+
+import com.eventeasyv1.entities.enums.StatutInvitation;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.ToString;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "invitation")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"client", "evenement"})
+@Table(name = "invitations")
 public class Invitation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "email", length = 150)
-    private String email; // Email de l'invité
+    @Column(nullable = false, length = 150) // Email de l'invité
+    private String email;
 
     @Lob
-    @Column(name = "message")
     private String message;
 
-    @Column(name = "date_envoi")
+    @CreationTimestamp
+    @Column(name = "date_envoi", nullable = false, updatable = false)
     private LocalDateTime dateEnvoi;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "client_id") // Client qui envoie (peut être null si l'événement a un créateur clair)
-    @ToString.Exclude
-    private Client client;
+    //Optionnel : Statut de l'invitation (ex: ENVOYEE, ACCEPTEE, REFUSEE)
+    @Enumerated(EnumType.STRING)
+     @Column(name = "statut_invitation", length = 50)
+    private StatutInvitation statut;
+
+    // L'invitation est envoyée par un client (l'organisateur)
+    // Bien que l'événement appartienne au client, on peut garder une trace ici si un client différent envoie pour un autre.
+    // Mais plus logiquement, c'est l'événement qui est lié au client.
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "client_envoyeur_id")
+    // private Client clientEnvoyeur;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evenement_id", nullable = false)
-    @ToString.Exclude
-    private Evenement evenement;
+    private Evenement evenement; // Événement auquel l'invitation se rapporte
 }

@@ -1,19 +1,20 @@
 package com.eventeasyv1.entities;
+
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.ToString;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notification")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"utilisateur"})
+@Table(name = "notifications")
 public class Notification {
 
     @Id
@@ -21,14 +22,17 @@ public class Notification {
     private Long id;
 
     @Lob
-    @Column(name = "message")
+    @Column(nullable = false)
     private String message;
 
-    @Column(name = "date_envoi")
+    @CreationTimestamp
+    @Column(name = "date_envoi", nullable = false, updatable = false)
     private LocalDateTime dateEnvoi;
+
+    @Column(name = "est_lue", nullable = false)
+    private boolean estLue = false; // Valeur par défaut
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utilisateur_id", nullable = false)
-    @ToString.Exclude
-    private Utilisateur utilisateur;
+    private Utilisateur utilisateur; // Utilisateur destinataire
 }
